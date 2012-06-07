@@ -3,8 +3,12 @@ SERVER=eplapp.library.ualberta.ca
 USER=sirsi
 REMOTE=~/Unicorn/EPLwork/anisbet/
 LOCAL=~/projects/rptstat/
+APP=rptstat.pl
 
-get:
-	scp ${USER}@${SERVER}:${REMOTE}rptstat.pl ${LOCAL}
 put:
-	scp ${LOCAL}rptstat.pl ${USER}@${SERVER}:${REMOTE}
+	perl -c ${LOCAL}${APP}
+	scp ${LOCAL}${APP} ${USER}@${SERVER}:${REMOTE}
+get:
+	scp ${USER}@${SERVER}:${REMOTE}${APP} ${LOCAL}
+test:
+	perl -c ${LOCAL}${APP}
