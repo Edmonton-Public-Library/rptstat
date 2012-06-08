@@ -39,9 +39,14 @@ sub usage()
 This script takes the name, or partial name of a report finds it by date
 (default today) and outputs the results to STDOUT.
 
-usage: $0 [-x] [-d ascii_date] [-n report_name] [-m email] [-2345789[aAbBcDghHiIMmopstTu]]
+usage: $0 [-x] [-d ascii_date] [-n report_name] [-2345789[aAbBcDghHiIMmopstTu]] [-i file]
 
  -d yyyymmdd : checks the reports for a specific day (ASCII date format)
+ -i file     : UNFINISHED input file of stats you want to collect. Should be formated as:
+               name|date (optional)|code1|code2|...|codeN|
+			   Example: 
+               Generalized bills||5u|, which would report the number of user's selected from 
+               today's report.
  -n name     : name (or partial name) of report.
  -o output   : output capital letters for report meta data lowercase for report results:
                d - date ascii
@@ -78,10 +83,9 @@ usage: $0 [-x] [-d ascii_date] [-n report_name] [-m email] [-2345789[aAbBcDghHiI
 				u	user
 				a	useracnt
 				s	userstatus
- -m addrs    : mail output to provided address
  -x          : this (help) message
 
-example: $0 -d 20120324 -m anisbet\@epl.ca
+example: $0 -d 20120324 -n "Generalized bills" -9u
 
 EOF
     exit;
@@ -93,54 +97,126 @@ chomp($listDir);
 my $printList          = qq{$listDir/printlist};
 my $date               = `transdate -d+0`;       # current date preseed.
 chomp($date);
-my $outParams;
+my @reportList;                                  # list of reports we want results from.
+my $options;                                     # Hash ref to the users switches for report output (all num switches)
 
 # Kicks off the setting of various switches.
 # param:  
 # return: 
 sub init
 {
-    my $opt_string = 'd:n:o:m:x2:3:4:5:7:8:9:';
+    my $opt_string = 'd:i:n:o:x2:3:4:5:7:8:9:';
     getopts( "$opt_string", \%opt ) or usage();
-    usage() if ($opt{x});
-    $date = $opt{'d'} if ($opt{d});
+    usage() if ($opt{'x'});
+    $date = $opt{'d'} if ($opt{'d'});
+	if ($opt{'i'})
+	{
+		open REPORT_LIST, "<$opt{'i'}" or die "Error: unable to open input report list: $!\n";
+		@reportList = <REPORT_LIST>;
+		close REPORT_LIST;
+	}
+	$options = getCmdLineOptionsForResults();
 }
 init();
-my $mail = "";
+
 open(PRINTLIST, $printList) || die "Failed to open $printList: $!\n";
 my @printListLines = <PRINTLIST>;
 close(PRINTLIST);
-# Search the print list for candidate reports.
-foreach my $printListLine (@printListLines)
+
+if ($opt{'i'})
 {
-	# vszd|Convert DISCARD Items CSDCA3|201202080921|OK|ADMIN|cvtdiscard|0||
-    my @printListEntry = split('\|', $printListLine);
-    # field 5 (0 indexed) contains the last run date.
-    #print $printlistColumn[0].":".substr($printlistColumn[2], 0, 8)."\n";
-    # if the time stamp the report ran matches the specified ascii date, and the name matches:
-    if ($printListEntry[1] =~ m/($opt{'n'})/ and substr($printListEntry[2], 0, 8) eq $date)
-    {
-		#print "$printListEntry[2]::I found the entry for $opt{'n'} in log file: $printListEntry[0].log for date $date\n";
-        # get it from the rptprint directory/wwqk.log
-        my $logFile = qq{$listDir/$printListEntry[0].log};
-		my $itemsPrinted = 0;
-		$itemsPrinted += getRptMetaData($opt{'o'}, @printListEntry);
-		$itemsPrinted += getRptResults($logFile, 1302, $opt{'2'});
-		$itemsPrinted += getRptResults($logFile, 1303, $opt{'3'});
-		$itemsPrinted += getRptResults($logFile, 1304, $opt{'4'});
-		$itemsPrinted += getRptResults($logFile, 1305, $opt{'5'});
-		$itemsPrinted += getRptResults($logFile, 1307, $opt{'7'});
-		$itemsPrinted += getRptResults($logFile, 1308, $opt{'8'});
-		$itemsPrinted += getRptResults($logFile, 1309, $opt{'9'});
-		if ($itemsPrinted > 0)
+	foreach my $reportListEntry (@reportList)
+	{
+		my @optionList = split('\|', $reportListEntry);
+		print @optionList."<--\n";
+		my $name = shift(@optionList);
+		my $d    = shift(@optionList);
+		if ($d ne "")
 		{
-			print "\n";
+			$date = $d;
+		}
+		# fill the options
+		foreach my $o (@optionList)
+		{
+			; # TODO split the 5u pair and populate options hash 
+			# this will overwrite any other options specified on cmd line.
+			my @switchCode = split('', $o);
+			# block malformed switch code pairs and ignore if they are longer than a pair.
+			if (defined($switchCode[0]) and defined($switchCode[1]))
+			{
+				$options->{$switchCode[0]} = $switchCode[1];
+			}
+		}
+		runSearch($name, $date, $options, @printListLines);
+	}
+}
+else # just one report requested by -n on the command line.
+{
+	runSearch($opt{'n'}, $date, $options, @printListLines);
+}
+
+
+sub runSearch
+{
+	my ($name, $date, $options, @printListLines) = @_;
+	my $itemsPrinted = 0;
+	my ($report, @printListEntry) = getReportFile($opt{'n'}, $date, @printListLines);
+	if ($report ne "")
+	{
+		$itemsPrinted += getRptMetaData($opt{'o'}, @printListEntry);
+		$itemsPrinted += getRptResults($report, $options);
+	}
+	if ($itemsPrinted > 0)
+	{
+		print "\n";
+	}
+}
+
+# Gets the options for the type of results the user wants to display from the report.
+# param:  none
+# return: hash reference of all the -[0-9] switches and options.
+sub getCmdLineOptionsForResults
+{
+	my $hashRef;
+	for my $key ( keys %opt )
+	{
+		if ($key =~ m/\d/) # we save all the numeric switches only.
+		{
+			$hashRef->{$key} = $opt{$key};
 		}
     }
+	return $hashRef;
+}
+
+# Checks the print list for the requested report by name and requested date
+# default to today, and returns the name of the file and the entry from printlist.
+# param:  reportName - string the name of the report.
+# param:  date - requested date.
+# return: (the fully qualified path to the report file, entry from print list as a List)
+#         or an empty string if no suitable entry found.
+sub getReportFile
+{
+	my ($rptName, $date, @printListLines) = @_;
+	# Search the print list for candidate reports.
+	my $itemsPrinted = 0;
+	foreach my $printListLine (@printListLines)
+	{
+		# vszd|Convert DISCARD Items CSDCA3|201202080921|OK|ADMIN|cvtdiscard|0||
+		my @printListEntry = split('\|', $printListLine);
+		# field 5 (0 indexed) contains the last run date and 
+		# if the time stamp the report ran matches the specified ascii date, and the name matches:
+		if ($printListEntry[1] =~ m/($rptName)/ and substr($printListEntry[2], 0, 8) eq $date)
+		{
+			# get it from the rptprint directory/wwqk.log
+			return (qq{$listDir/$printListEntry[0].log}, @printListEntry);
+		}
+	}
+	return "";
 }
 
 # This function prints out the requested metadata about the report.
 # param: outParams - string of codes user would like to see output.
+# param: printListRecord List: vszd|Convert DISCARD Items CSDCA3|201202080921|OK|ADMIN|cvtdiscard|0||
 # return: number of switches set.
 sub getRptMetaData
 {
@@ -182,12 +258,8 @@ sub getRptMetaData
 #        vszd|Convert DISCARD Items CSDCA3|201202080921|OK|ADMIN|cvtdiscard|0||
 sub getRptResults
 {
-	my ($reportFile, $switch, $options) = @_;
+	my ($reportFile, $options) = @_;
 	my $count = 0;
-	if (!defined($options))
-	{
-		return $count;
-	}
 	my %outParams = (
 		'I'=>"ascii",
 		'A'=>"authority",
@@ -213,14 +285,12 @@ sub getRptResults
 	open(REPORT, "<$reportFile") or die "Error opening $reportFile: $!\n";
 	my @log = <REPORT>;
 	close(REPORT);
-	# TODO get the actual text for each of the supplied options.
-	my @codeOptions = split('', $options);
 	foreach my $line (@log)
 	{
-		foreach my $code (@codeOptions)
+		while ( my ($switch, $code) = each(%$options) )
 		{
-			# find the code match per line.
-			if ($line =~ m/\$<($outParams{$code})> \$\(($switch)\)/)
+			# find the code match per line. Note we only look for 130[n] codes.
+			if ($line =~ m/\$<($outParams{$code})> \$\(130($switch)\)/)
 			{ 
 				print trim(substr($line, 0, index($line, "<") -1))."|";
 				$count++;
