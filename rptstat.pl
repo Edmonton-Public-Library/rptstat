@@ -131,14 +131,15 @@ if ($opt{'i'})
 		print @optionList."<--\n";
 		my $name = shift(@optionList);
 		my $d    = shift(@optionList);
-		if ($d ne "")
+		# Did the user enter the minimum of an ascii date value?
+		if ($d =~ m/\d{8}/) 
 		{
 			$date = $d;
 		}
 		# fill the options
 		foreach my $o (@optionList)
 		{
-			; # TODO split the 5u pair and populate options hash 
+			# Split the '5u' pairs and populate options hash 
 			# this will overwrite any other options specified on cmd line.
 			my @switchCode = split('', $o);
 			# block malformed switch code pairs and ignore if they are longer than a pair.
