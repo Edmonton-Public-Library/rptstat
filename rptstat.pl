@@ -44,18 +44,18 @@ usage: $0 [-x] [-d ascii_date] [-n report_name] [-2345789[aAbBcDghHiIMmopstTu]] 
  -d yyyymmdd : checks the reports for a specific day (ASCII date format)
  -i file     : UNFINISHED input file of stats you want to collect. Should be formated as:
                name|date (optional)|code1|code2|...|codeN|
-			   Example: 
+             Example: 
                Generalized bills||5u|, which would report the number of user's selected from 
                today's report.
  -n name     : name (or partial name) of report.
  -o output   : output capital letters for report meta data lowercase for report results:
                d - date ascii
-			   D - date and time ascii
-			   r - Report name
-			   s - status
-			   o - owner
-			   n - script name
-			   c - report code - 4 digit code for tracking.
+               D - date and time ascii
+               r - Report name
+               s - status
+               o - owner
+               n - script name
+               c - report code - 4 digit code for tracking.
  -2 <code>   : records edited
  -3 <code>   : records printed
  -4 <code>   : items printed
@@ -63,26 +63,26 @@ usage: $0 [-x] [-d ascii_date] [-n report_name] [-2345789[aAbBcDghHiIMmopstTu]] 
  -7 <code>   : records encountered
  -8 <code>   : records considered
  -9 <code>   : records selected
- code        :	I	ascii
-				A	authority
-				B	bib
-				b	bill
-				n	callnum
-				t	catacnt
-				C	catalog
-				c	charge
-				g	charge
-				H	chargehist
-				M	communication
-				h	hold
-				i	item
-				m	itemacnt
-				N	notice
-				p	pickup
-				T	transact
-				u	user
-				a	useracnt
-				s	userstatus
+ code        : I - ascii
+               A - authority
+               B - bib
+               b - bill
+               n - callnum
+               t - catacnt
+               C - catalog
+               c - charge
+               g - charge
+               H - chargehist
+               M - communication
+               h - hold
+               i - item
+               m - itemacnt
+               N - notice
+               p - pickup
+               T - transact
+               u - user
+               a - useracnt
+               s - userstatus
  -x          : this (help) message
 
 example: $0 -d 20120324 -n "Generalized bills" -9u
@@ -128,14 +128,15 @@ if ($opt{'i'})
 	foreach my $reportListEntry (@reportList)
 	{
 		my @optionList = split('\|', $reportListEntry);
-		print @optionList."<--\n";
-		my $name = shift(@optionList);
-		my $d    = shift(@optionList);
+		my $name = $optionList[0];
+		my $d    = $optionList[1];
 		# Did the user enter the minimum of an ascii date value?
-		if ($d =~ m/\d{8}/) 
+		if ($d ne "" and $d =~ m/\d{8}/) 
 		{
 			$date = $d;
 		}
+		shift(@optionList);
+		shift(@optionList);
 		# fill the options
 		foreach my $o (@optionList)
 		{
@@ -161,7 +162,7 @@ sub runSearch
 {
 	my ($name, $date, $options, @printListLines) = @_;
 	my $itemsPrinted = 0;
-	my ($report, @printListEntry) = getReportFile($opt{'n'}, $date, @printListLines);
+	my ($report, @printListEntry) = getReportFile($name, $date, @printListLines);
 	if ($report ne "")
 	{
 		$itemsPrinted += getRptMetaData($opt{'o'}, @printListEntry);
@@ -199,6 +200,10 @@ sub getReportFile
 {
 	my ($rptName, $date, @printListLines) = @_;
 	# Search the print list for candidate reports.
+	if ($rptName eq "")
+	{
+		return "";
+	}
 	my $itemsPrinted = 0;
 	foreach my $printListLine (@printListLines)
 	{
