@@ -1,0 +1,3 @@
+TODO:
+DONE - rptstat.pl needs to be able to be to output email counts and notice counts.
+reformulated: rptstat.pl needs to execute an external script whose results will be displayed instead of the usual status output.

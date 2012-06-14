@@ -1,4 +1,4 @@
-#!/s/sirsi/Unicorn/Bin/perl
+#!/s/sirsi/Unicorn/Bin/perl -w
 ########################################################################
 # Purpose: Get results of a given report report.
 # Method:  The script reads the printlist searching for Convert discards
@@ -8,9 +8,9 @@
 #          for the Morning stats reporting. All results and statuses are
 #          printed to STDOUT.
 #
-# Author:  Andrew Nisbet
+# Author:  Andrew Nisbet, Edmonton Public Library.
 # Date:    May 25, 2012
-# Rev:     0.0 - develop
+# Rev:     0.1 - develop
 ########################################################################
 
 use strict;
@@ -37,16 +37,25 @@ sub usage()
     print STDERR << "EOF";
 
 This script takes the name, or partial name of a report finds it by date
-(default today) and outputs the results to STDOUT.
+(default today) and outputs the results to STDOUT. The 3rd field in the -i file
+can include a script to run who's output will be printed first. If the script requires
+the current report as an argument, then use the \@ character as a placeholder for the
+name of the report being reported on.
+Example: './count.pl -i \@.prn -s "\.email"' will run the script with \@ symbol expanded to:
+'./count.pl -i /s/sirsi/Unicorn/Rptprint/xast.prn -s "\.email"'.
 
-usage: $0 [-x] [-d ascii_date] [-n report_name] [-2345789[aAbBcDghHiIMmopstTu]] [-i file]
+usage: $0 [-x] [-d ascii_date] [-n report_name] [-2345789[aAbBcDghHiIMmopstTu]] [-i file] [-D]
 
  -d yyyymmdd : checks the reports for a specific day (ASCII date format)
  -i file     : UNFINISHED input file of stats you want to collect. Should be formated as:
-               name|date (optional)|code1|code2|...|codeN|
+               name (required)|date (required but can be blank)|script and params (required but can be blank|code1|code2|...|codeN|
              Example: 
-               Generalized bills||5u|, which would report the number of user's selected from 
-               today's report.
+               Generalized bills|||5u|
+			   which would report the number of user's selected from today's report.
+             Example:
+			   Holds Notices|20120614|./script.pl -e|9N|
+			   which would print the output from script.pl -e as the results in addition
+			   to the codes you specify. You may get unpredictable results depending on the executable's behaviour.
  -n name     : name (or partial name) of report.
  -o output   : output capital letters for report meta data lowercase for report results:
                d - date ascii
@@ -105,14 +114,22 @@ my $options;                                     # Hash ref to the users switche
 # return: 
 sub init
 {
-    my $opt_string = 'd:i:n:o:x2:3:4:5:7:8:9:';
+    my $opt_string = 'Dd:i:n:o:x2:3:4:5:7:8:9:';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ($opt{'x'});
     $date = $opt{'d'} if ($opt{'d'});
 	if ($opt{'i'})
 	{
 		open REPORT_LIST, "<$opt{'i'}" or die "Error: unable to open input report list: $!\n";
-		@reportList = <REPORT_LIST>;
+		# skip empty or lines that start with #
+		while (<REPORT_LIST>)
+		{
+			if ($_ =~ m/^ / or $_ =~ m/^#/)
+			{
+				next;
+			}
+			push(@reportList, $_);
+		}
 		close REPORT_LIST;
 	}
 	$options = getCmdLineOptionsForResults();
@@ -125,18 +142,42 @@ close(PRINTLIST);
 
 if ($opt{'i'})
 {
+	my $lineCount = 1;
 	foreach my $reportListEntry (@reportList)
 	{
 		my @optionList = split('\|', $reportListEntry);
-		my $name = $optionList[0];
-		my $d    = $optionList[1];
+		if (@optionList < 3)
+		{
+			print STDERR "malformed input file $opt{'i'} on line $lineCount\n";
+			exit 0;
+		}
+		$lineCount++;
+		my $name   = $optionList[0];
+		my $d      = $optionList[1];
+		my $script = qq{$optionList[2]};
+		# make sure these options don't get passed on to the search.
+		shift(@optionList);
+		shift(@optionList);
+		shift(@optionList);
 		# Did the user enter the minimum of an ascii date value?
 		if ($d ne "" and $d =~ m/\d{8}/) 
 		{
 			$date = $d;
 		}
-		shift(@optionList);
-		shift(@optionList);
+		# now execute the script if there is one.
+		if ($script ne "")
+		{
+			# now a user can use the '@' symbol to indicate that the 
+			# the name of the file is to be substituted. First we have
+			# to get the name of the file:
+			my ($argFile, @notRequired) = getReportFile($name, $date, @printListLines);
+			$script =~ s/@/$argFile/g;
+			if ($opt{'D'})
+			{
+				print STDERR "running script: '$script'\n";
+			}
+			print `$script`;
+		}
 		# fill the options
 		foreach my $o (@optionList)
 		{
@@ -157,7 +198,14 @@ else # just one report requested by -n on the command line.
 	runSearch($opt{'n'}, $date, $options, @printListLines);
 }
 
-
+#
+# Perhaps no surprise that this runs the search based on the input parameters.
+# param:  name - string name, or partial name, of the report.
+# param:  date - string requested date of the report in ANSI 'yyyymmdd' format.
+# param:  options - string list of switches and codes for status'.
+# param:  printListLines - array of all the lines in the print list.
+# return: 
+#
 sub runSearch
 {
 	my ($name, $date, $options, @printListLines) = @_;
@@ -165,6 +213,7 @@ sub runSearch
 	my ($report, @printListEntry) = getReportFile($name, $date, @printListLines);
 	if ($report ne "")
 	{
+		$report .= ".log";
 		$itemsPrinted += getRptMetaData($opt{'o'}, @printListEntry);
 		$itemsPrinted += getRptResults($report, $options);
 	}
@@ -214,7 +263,7 @@ sub getReportFile
 		if ($printListEntry[1] =~ m/($rptName)/ and substr($printListEntry[2], 0, 8) eq $date)
 		{
 			# get it from the rptprint directory/wwqk.log
-			return (qq{$listDir/$printListEntry[0].log}, @printListEntry);
+			return (qq{$listDir/$printListEntry[0]}, @printListEntry);
 		}
 	}
 	return "";
