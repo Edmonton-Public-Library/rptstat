@@ -51,11 +51,11 @@ usage: $0 [-x] [-d ascii_date] [-n report_name] [-2345789[aAbBcDghHiIMmopstTu]] 
                name (required)|date (required but can be blank)|script and params (required but can be blank|code1|code2|...|codeN|
              Example: 
                Generalized bills|||5u|
-			   which would report the number of user's selected from today's report.
+               which would report the number of user's selected from today's report.
              Example:
-			   Holds Notices|20120614|./script.pl -e|9N|
-			   which would print the output from script.pl -e as the results in addition
-			   to the codes you specify. You may get unpredictable results depending on the executable's behaviour.
+               Holds Notices|20120614|./script.pl -e|9N|
+               which would print the output from script.pl -e as the results in addition
+               to the codes you specify. You may get unpredictable results depending on the executable's behaviour.
  -n name     : name (or partial name) of report.
  -o output   : output capital letters for report meta data lowercase for report results:
                d - date ascii
