@@ -4,6 +4,7 @@ USER=sirsi
 REMOTE=~/Unicorn/EPLwork/anisbet/
 LOCAL=~/projects/rptstat/
 APP=rptstat.pl
+C_WEEKDAYS=weekday.stats
 
 put:
 	perl -c ${LOCAL}${APP}
@@ -12,3 +13,5 @@ get:
 	scp ${USER}@${SERVER}:${REMOTE}${APP} ${LOCAL}
 test:
 	perl -c ${LOCAL}${APP}
+push_report_configs:
+	scp ${LOCAL}${C_WEEKDAYS} ${USER}@${SERVER}:${REMOTE}

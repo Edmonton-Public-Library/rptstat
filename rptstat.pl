@@ -145,6 +145,7 @@ if ($opt{'i'})
 	my $lineCount = 1;
 	foreach my $reportListEntry (@reportList)
 	{
+		$options = {}; # new hash ref for options unique to each line.
 		my @optionList = split('\|', $reportListEntry);
 		if (@optionList < 3)
 		{
@@ -343,8 +344,16 @@ sub getRptResults
 		while ( my ($switch, $code) = each(%$options) )
 		{
 			# find the code match per line. Note we only look for 130[n] codes.
+			# print ">>$line<<: $outParams{$code}, $switch\n";
+			# You need to check this when using a config file since user's
+			# can easily enter wrong codes and switches in the file.
+			if (!defined($outParams{$code}) or !defined($switch))
+			{
+				print STDERR "Ignoring invalid switch or code (check -i file for errors or that the requested code is valid. See -x).\n";
+				return 0;
+			}
 			if ($line =~ m/\$<($outParams{$code})> \$\(130($switch)\)/)
-			{ 
+			{
 				print trim(substr($line, 0, index($line, "<") -1))."|";
 				$count++;
 			}
