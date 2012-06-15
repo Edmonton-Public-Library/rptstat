@@ -94,7 +94,7 @@ usage: $0 [-x] [-d ascii_date] [-n report_name] [-2345789[aAbBcDghHiIMmopstTu]] 
                s - userstatus
  -x          : this (help) message
 
-example: $0 -d 20120324 -n "Generalized bills" -9u
+example: $0 -d 20120324 -n "Generalized Bill" -5u
 
 EOF
     exit;
