@@ -190,7 +190,12 @@ if ($opt{'i'})
 			{
 				print STDERR "running script: '$script'\n";
 			}
-			$result += system($script);
+			# we can't just print what the script does becaue when no other option is picked
+			# it can return a new line and nothing else which means it failed.
+			my $sResults = `$script`;
+			print $sResults;
+			chomp($sResults);
+			$result += 1 if ($sResults ne "");
 		}
 		print "\n" if ($result);
 	}
@@ -218,6 +223,10 @@ sub runSearch
 		$report .= ".log";
 		$itemsPrinted += getRptMetaData($opt{'o'}, @printListEntry);
 		$itemsPrinted += getRptResults($report, $options);
+	}
+	else # Print that the report is not available.
+	{
+		print STDERR "report '$name' from '$date' is not available.\n";
 	}
 	return $itemsPrinted;
 }
