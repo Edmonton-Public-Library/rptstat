@@ -164,20 +164,6 @@ if ($opt{'i'})
 		{
 			$date = $d;
 		}
-		# now execute the script if there is one.
-		if ($script ne "")
-		{
-			# now a user can use the '@' symbol to indicate that the 
-			# the name of the file is to be substituted. First we have
-			# to get the name of the file:
-			my ($argFile, @notRequired) = getReportFile($name, $date, @printListLines);
-			$script =~ s/@/$argFile/g;
-			if ($opt{'D'})
-			{
-				print STDERR "running script: '$script'\n";
-			}
-			print `$script`;
-		}
 		# fill the options
 		foreach my $o (@optionList)
 		{
@@ -190,12 +176,27 @@ if ($opt{'i'})
 				$options->{$switchCode[0]} = $switchCode[1];
 			}
 		}
-		runSearch($name, $date, $options, @printListLines);
+		my $result = runSearch($name, $date, $options, @printListLines);
+		# now execute the script if there is one.
+		if ($script ne "")
+		{
+			# now a user can use the '@' symbol to indicate that the 
+			# the name of the file is to be substituted. First we have
+			# to get the name of the file:
+			my ($argFile, @notRequired) = getReportFile($name, $date, @printListLines);
+			$script =~ s/@/$argFile/g;
+			if ($opt{'D'})
+			{
+				print STDERR "running script: '$script'\n";
+			}
+			$result += system($script);
+		}
+		print "\n" if ($result);
 	}
 }
 else # just one report requested by -n on the command line.
 {
-	runSearch($opt{'n'}, $date, $options, @printListLines);
+	print "\n" if (runSearch($opt{'n'}, $date, $options, @printListLines));
 }
 
 #
@@ -217,10 +218,7 @@ sub runSearch
 		$itemsPrinted += getRptMetaData($opt{'o'}, @printListEntry);
 		$itemsPrinted += getRptResults($report, $options);
 	}
-	if ($itemsPrinted > 0)
-	{
-		print "\n";
-	}
+	return $itemsPrinted;
 }
 
 # Gets the options for the type of results the user wants to display from the report.
@@ -249,7 +247,7 @@ sub getReportFile
 {
 	my ($rptName, $date, @printListLines) = @_;
 	# Search the print list for candidate reports.
-	if ($rptName eq "")
+	if (!defined($rptName) or $rptName eq "")
 	{
 		return "";
 	}
