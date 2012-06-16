@@ -100,6 +100,31 @@ EOF
     exit;
 }
 
+#
+# Returns the date based on the request of either 'yyyymmdd' or '-n', where
+# 'n' is the number of days in the past that the required report was run.
+# param:  string of ANSI date to '-n' format.
+# return: requested date.
+#
+sub getDate($)
+{
+	my $d = shift;
+	if ($d =~ m/\d{8}/) 
+	{
+		return $d;
+	}
+	elsif (substr($d, 0, 1) eq "-") # date from some 'N' days ago.
+	{
+		my $numDays = substr($d, 1);
+		my $date = `transdate -d-$numDays`;
+		chomp($date);
+		print "     -$date- -$numDays-\n" if ($opt{'D'});
+		return $date;
+	}
+	print STDERR "Invalid date specified.\n";
+	return "";
+}
+
 # use this next line for production.
 my $listDir            = `getpathname rptprint`;
 chomp($listDir);
@@ -117,7 +142,7 @@ sub init
     my $opt_string = 'Dd:i:n:o:x2:3:4:5:7:8:9:';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ($opt{'x'});
-    $date = $opt{'d'} if ($opt{'d'});
+    $date = getDate($opt{'d'}) if ($opt{'d'});
 	if ($opt{'i'})
 	{
 		open REPORT_LIST, "<$opt{'i'}" or die "Error: unable to open input report list: $!\n";
@@ -161,9 +186,9 @@ if ($opt{'i'})
 		shift(@optionList);
 		shift(@optionList);
 		# Did the user enter the minimum of an ascii date value?
-		if ($d ne "" and $d =~ m/\d{8}/) 
+		if ($d ne "")
 		{
-			$date = $d;
+			$date = getDate($d);
 		}
 		# fill the options
 		foreach my $o (@optionList)
