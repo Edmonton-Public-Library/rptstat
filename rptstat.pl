@@ -46,7 +46,7 @@ Example: './count.pl -i \@.prn -s "\.email"' will run the script with \@ symbol 
 
 usage: $0 [-x] [-d ascii_date] [-n report_name] [-2345789[aAbBcDghHiIMmopstTu]] [-i file] [-D]
 
- -d yyyymmdd : checks the reports for a specific day (ASCII date format)
+ -d yyyymmdd : checks the reports for a specific day (ANSI date format)
  -i file     : UNFINISHED input file of stats you want to collect. Should be formated as:
                name (required)|date (required but can be blank)|script and params (required but can be blank|code1|code2|...|codeN|
              Example: 
@@ -57,14 +57,14 @@ usage: $0 [-x] [-d ascii_date] [-n report_name] [-2345789[aAbBcDghHiIMmopstTu]] 
                which would print the output from script.pl -e as the results in addition
                to the codes you specify. You may get unpredictable results depending on the executable's behaviour.
  -n name     : name (or partial name) of report.
- -o output   : output capital letters for report meta data lowercase for report results:
+ -o          : output capital letters for report meta data lowercase for report results:
                d - date ascii
                D - date and time ascii
-               r - Report name
+               r - report name
                s - status
                o - owner
                n - script name
-               c - report code - 4 digit code for tracking.
+               c - report code - 4 character code report file name.
  -2 <code>   : records edited
  -3 <code>   : records printed
  -4 <code>   : items printed
@@ -204,6 +204,7 @@ else # just one report requested by -n on the command line.
 {
 	print "\n" if (runSearch($opt{'n'}, $date, $options, @printListLines));
 }
+1;
 
 #
 # Perhaps no surprise that this runs the search based on the input parameters.
@@ -211,7 +212,7 @@ else # just one report requested by -n on the command line.
 # param:  date - string requested date of the report in ANSI 'yyyymmdd' format.
 # param:  options - string list of switches and codes for status'.
 # param:  printListLines - array of all the lines in the print list.
-# return: 
+# return: number of items successfully matched to the supplied options.
 #
 sub runSearch
 {
@@ -371,7 +372,10 @@ sub getRptResults
 	return $count;
 }
 
-# Trim function to remove whitespace from the start and end of the string
+#
+# Trim function to remove whitespace from the start and end of the string.
+# param:  string to trim.
+# return: string without leading or trailing spaces.
 sub trim($)
 {
 	my $string = shift;
