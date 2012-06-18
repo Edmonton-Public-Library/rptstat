@@ -109,8 +109,16 @@ EOF
 sub getDate($)
 {
 	my $d = shift;
+	if ($d eq "")
+	{
+		my $date = `transdate -d-0`;
+		chomp($date);
+		print "     -$date-\n" if ($opt{'D'});
+		return $date;
+	}
 	if ($d =~ m/\d{8}/) 
 	{
+		print "     -$d-\n" if ($opt{'D'});
 		return $d;
 	}
 	elsif (substr($d, 0, 1) eq "-") # date from some 'N' days ago.
@@ -149,7 +157,7 @@ sub init
 		# skip empty or lines that start with #
 		while (<REPORT_LIST>)
 		{
-			if ($_ =~ m/^ / or $_ =~ m/^#/)
+			if ($_ =~ m/^ / or $_ =~ m/^#/ or $_ eq "\n")
 			{
 				next;
 			}
@@ -185,11 +193,7 @@ if ($opt{'i'})
 		shift(@optionList);
 		shift(@optionList);
 		shift(@optionList);
-		# Did the user enter the minimum of an ascii date value?
-		if ($d ne "")
-		{
-			$date = getDate($d);
-		}
+		$date = getDate($d);
 		# fill the options
 		foreach my $o (@optionList)
 		{

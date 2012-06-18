@@ -2,28 +2,39 @@
 Hold Pickup Notices - 2 PM|-3||5u|
 Hold Pickup Notices - 9 PM|-3||5u|
 
+
 # ===Saturday stats===
-Hold Pickup Notices - Tues to Fri|-2||5u|
+Overdue Notices - Sat to Sun|-2||5u|
+Generalized Bill Notices - Sat to Sun|-2||5u|
 Renewal Reminder|-2||9u|
 Preoverdue Courtesy Reminder|-2||5u|
 Expired Privilege Reminder - 30 Days|-2||9u|
 Overdue Reminder - 3 Days|-2||5u|
+Hold Pickup Reminder|-2||5u|
 Self Registration Activation Expiry Reminder|-2||9u|
+Hold Pickup Notices - 2 PM|-2||5u|
+Hold Pickup Notices - 9 PM|-2||5u|
+
 
 # ===Sunday stats===
-Hold Pickup Notices - Tues to Fri|-1||5u|
+Overdue Notices - Sat to Sun|-1||5u|
+Generalized Bill Notices - Sat to Sun|-1||5u|
 Renewal Reminder|-1||9u|
 Preoverdue Courtesy Reminder|-1||5u|
 Expired Privilege Reminder - 30 Days|-1||9u|
 Overdue Reminder - 3 Days|-1||5u|
+Hold Pickup Reminder|-1||5u|
 Self Registration Activation Expiry Reminder|-1||9u|
+Hold Pickup Notices - 2 PM|-1||5u|
+Hold Pickup Notices - 9 PM|-1||5u|
+
 
 # ===Monday stats===
-Generalized Bill Notices - Weekday|||5u|
-Generalized Bill Notices - Weekday||count.pl -i @.prn -s"\.email"|
 Overdue Notices - Weekdays|||5u|
 Overdue Notices - Weekdays||count.pl -i @.prn -s"\.email"|
-Hold Pickup Notices - Tues to Fri|||5u|
+Hold Pickup Notices - Monday|||5u|
+Generalized Bill Notices - Weekday|||5u|
+Generalized Bill Notices - Weekday||count.pl -i @.prn -s"\.email"|
 Renewal Reminder|||9u|
 Preoverdue Courtesy Reminder|||5u|
 Expired Privilege Reminder - 30 Days|||9u|
