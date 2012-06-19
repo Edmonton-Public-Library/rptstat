@@ -92,10 +92,11 @@ usage: $0 [-x] [-d ascii_date] [-n report_name] [-2345789[aAbBcDghHiIMmopstTu]] 
                u - user
                a - useracnt
                s - userstatus
+ -s script   : script that you want to run.
  -x          : this (help) message
 
-example: $0 -d 20120324 -n "Generalized Bill" -5u
-
+example: $0 -d 20120324 -n "Generalized Bill" -5u -s"count.pl -i @.log -s\"\.email\"" 
+         $0 -n"Convert DISCARD" -odr -s"count.pl -i @.log -s\"WOOCA6\"" -d-1
 EOF
     exit;
 }
@@ -116,7 +117,7 @@ sub getDate($)
 		print "     -$date-\n" if ($opt{'D'});
 		return $date;
 	}
-	if ($d =~ m/\d{8}/) 
+	elsif ($d =~ m/\d{8}/)
 	{
 		print "     -$d-\n" if ($opt{'D'});
 		return $d;
@@ -147,7 +148,7 @@ my $options;                                     # Hash ref to the users switche
 # return: 
 sub init
 {
-    my $opt_string = 'Dd:i:n:o:x2:3:4:5:7:8:9:';
+    my $opt_string = 'Dd:i:n:o:s:x2:3:4:5:7:8:9:';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ($opt{'x'});
     $date = getDate($opt{'d'}) if ($opt{'d'});
@@ -188,7 +189,7 @@ if ($opt{'i'})
 		$lineCount++;
 		my $name   = $optionList[0];
 		my $d      = $optionList[1];
-		my $script = qq{$optionList[2]};
+		my $script = $optionList[2];
 		# make sure these options don't get passed on to the search.
 		shift(@optionList);
 		shift(@optionList);
@@ -206,32 +207,12 @@ if ($opt{'i'})
 				$options->{$switchCode[0]} = $switchCode[1];
 			}
 		}
-		my $result = runSearch($name, $date, $options, @printListLines);
-		# now execute the script if there is one.
-		if ($script ne "")
-		{
-			# now a user can use the '@' symbol to indicate that the 
-			# the name of the file is to be substituted. First we have
-			# to get the name of the file:
-			my ($argFile, @notRequired) = getReportFile($name, $date, @printListLines);
-			$script =~ s/@/$argFile/g;
-			if ($opt{'D'})
-			{
-				print STDERR "running script: '$script'\n";
-			}
-			# we can't just print what the script does becaue when no other option is picked
-			# it can return a new line and nothing else which means it failed.
-			my $sResults = `$script`;
-			print $sResults;
-			chomp($sResults);
-			$result += 1 if ($sResults ne "");
-		}
-		print "\n" if ($result);
+		runSearch($name, $date, $options, $script, @printListLines);
 	}
 }
 else # just one report requested by -n on the command line.
 {
-	print "\n" if (runSearch($opt{'n'}, $date, $options, @printListLines));
+	runSearch($opt{'n'}, $date, $options, $opt{'s'}, @printListLines);
 }
 1;
 
@@ -241,18 +222,48 @@ else # just one report requested by -n on the command line.
 # param:  date - string requested date of the report in ANSI 'yyyymmdd' format.
 # param:  options - string list of switches and codes for status'.
 # param:  printListLines - array of all the lines in the print list.
+# param:  script - executable command line string.
 # return: number of items successfully matched to the supplied options.
 #
 sub runSearch
 {
-	my ($name, $date, $options, @printListLines) = @_;
+	my ($name, $date, $options, $script, @printListLines) = @_;
 	my $itemsPrinted = 0;
-	my ($report, @printListEntry) = getReportFile($name, $date, @printListLines);
-	if ($report ne "")
+	my $cmdLine;
+	#my ($report, @printListEntry) = getReportFile($name, $date, @printListLines);
+	# Find all the reports with the name, or partial name supplied.
+	my $reportHash = getReportFile($name, $date, @printListLines);
+	if (keys (%$reportHash) > 0)
 	{
-		$report .= ".log";
-		$itemsPrinted += getRptMetaData($opt{'o'}, @printListEntry);
-		$itemsPrinted += getRptResults($report, $options);
+		for my $reportKey ( keys %$reportHash )
+		{
+			my $report = $reportKey.".log";
+			$itemsPrinted += getRptMetaData($opt{'o'}, $reportHash->{ $reportKey });
+			$itemsPrinted += getRptResults($report, $options);
+			# now execute the script if there is one.
+			if ($script ne "")
+			{
+				# we need to replace the @ for each report.
+				$cmdLine = $script;
+				# now a user can use the '@' symbol to indicate that the 
+				# the name of the file is to be substituted. First we have
+				# replace any '@' with the path and name of the report.
+				print "\n$report==>and $reportKey\n" if ($opt{'D'});
+				$cmdLine =~ s/@/$reportKey/g;
+				print STDERR "running script: '$cmdLine'\n" if ($opt{'D'});
+				# we can't just print what the script does becaue when no other option is picked
+				# it can return a new line and nothing else which means it failed.
+				my $runThis = qq{$cmdLine};
+				my $sResults = `$runThis`;
+				print $sResults;
+				chomp($sResults);
+				$itemsPrinted += 1 if ($sResults ne "");
+			}
+			if ($itemsPrinted > 0)
+			{
+				print "\n";
+			}
+		}
 	}
 	else # Print that the report is not available.
 	{
@@ -286,6 +297,7 @@ sub getCmdLineOptionsForResults
 sub getReportFile
 {
 	my ($rptName, $date, @printListLines) = @_;
+	my $hashRef;
 	# Search the print list for candidate reports.
 	if (!defined($rptName) or $rptName eq "")
 	{
@@ -301,10 +313,11 @@ sub getReportFile
 		if ($printListEntry[1] =~ m/($rptName)/ and substr($printListEntry[2], 0, 8) eq $date)
 		{
 			# get it from the rptprint directory/wwqk.log
-			return (qq{$listDir/$printListEntry[0]}, @printListEntry);
+			my $reportPath = qq{$listDir/$printListEntry[0]};
+			$hashRef->{ $reportPath } = $printListLine;
 		}
 	}
-	return "";
+	return $hashRef;
 }
 
 # This function prints out the requested metadata about the report.
@@ -313,7 +326,8 @@ sub getReportFile
 # return: number of switches set.
 sub getRptMetaData
 {
-	my ($outParams, @printListRecord) = @_;
+	my ($outParams, $printRecord) = @_;
+	my @printListRecord = split('\|', $printRecord);
 	my $count = 0;
 	if (!defined($outParams))
 	{
