@@ -241,7 +241,7 @@ sub runSearch
 			$itemsPrinted += getRptMetaData($opt{'o'}, $reportHash->{ $reportKey });
 			$itemsPrinted += getRptResults($report, $options);
 			# now execute the script if there is one.
-			if ($script ne "")
+			if (defined($script) and $script ne "")
 			{
 				# we need to replace the @ for each report.
 				$cmdLine = $script;
