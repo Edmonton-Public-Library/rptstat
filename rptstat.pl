@@ -142,6 +142,7 @@ my $date               = `transdate -d+0`;       # current date preseed.
 chomp($date);
 my @reportList;                                  # list of reports we want results from.
 my $options;                                     # Hash ref to the users switches for report output (all num switches)
+my $externSymbol       = qq{%};                   # symbol that this is an external report not found in printlist.
 
 # Kicks off the setting of various switches.
 # param:  
@@ -150,7 +151,7 @@ sub init
 {
     my $opt_string = 'Dd:i:n:o:s:x2:3:4:5:7:8:9:';
     getopts( "$opt_string", \%opt ) or usage();
-    usage() if ($opt{'x'});
+    usage() if ($opt{'x'} or (!$opt{'n'} and !$opt{'i'})); # Must have a name or a config that must have a name.
     $date = getDate($opt{'d'}) if ($opt{'d'});
 	if ($opt{'i'})
 	{
@@ -207,14 +208,65 @@ if ($opt{'i'})
 				$options->{$switchCode[0]} = $switchCode[1];
 			}
 		}
-		runSearch($name, $date, $options, $script, @printListLines);
+		# Do we run this as a stand alone command or do we search print list?
+		if ($name eq "")
+		{
+			print STDERR "*** error: ignoring un-named report request on line $lineCount***\n";
+		}
+		elsif ($name =~ m/^($externSymbol)/)
+		{
+			my $bareName = substr($name, length($externSymbol));
+			searchExternally($bareName, $date, $options, $script);
+		}
+		else
+		{
+			searchPrintList($name, $date, $options, $script, @printListLines);
+		}
 	}
 }
 else # just one report requested by -n on the command line.
 {
-	runSearch($opt{'n'}, $date, $options, $opt{'s'}, @printListLines);
+	if ($opt{'n'} =~ m/^($externSymbol)/)
+	{
+		my $bareName = substr($opt{'n'}, length($externSymbol));
+		searchExternally($bareName, $date, $options, $opt{'s'});
+	}
+	else
+	{
+		searchPrintList($opt{'n'}, $date, $options, $opt{'s'}, @printListLines);
+	}
 }
 1;
+
+# Runs an external script based on a request for '$Reporting Script Name||script||'
+# param:  name string name that will appear in output if -or is selected.
+# param:  date ANSI date - the user can specify a date but that can't be varified by 
+#         rptstat.pl since the optional included script is run now, but who knows
+#         when the data it produces was created.
+# param:  options string ignored.
+# param:  script - string command to run to produce stats.
+# return: 
+#
+sub searchExternally
+{
+	my ($name, $date, $options, $script) = @_;
+	my $record = "----|$name|$date|UNKNOWN|UNKNOWN|$script|0||";
+	my $itemsPrinted = getRptMetaData($opt{'o'}, $record);
+	if ($script ne "")
+	{
+		# we can't just print what the script does becaue when no other option is picked
+		# it can return a new line and nothing else which means it failed.
+		my $runThis = qq{$script};
+		my $sResults = `$runThis`;
+		print $sResults;
+		chomp($sResults);
+		$itemsPrinted += 1 if ($sResults ne "");
+	}
+	if ($itemsPrinted > 0)
+	{
+		print "\n";
+	}
+}
 
 #
 # Perhaps no surprise that this runs the search based on the input parameters.
@@ -225,12 +277,11 @@ else # just one report requested by -n on the command line.
 # param:  script - executable command line string.
 # return: number of items successfully matched to the supplied options.
 #
-sub runSearch
+sub searchPrintList
 {
 	my ($name, $date, $options, $script, @printListLines) = @_;
 	my $itemsPrinted = 0;
 	my $cmdLine;
-	#my ($report, @printListEntry) = getReportFile($name, $date, @printListLines);
 	# Find all the reports with the name, or partial name supplied.
 	my $reportHash = getReportFile($name, $date, @printListLines);
 	if (keys (%$reportHash) > 0)
@@ -303,7 +354,6 @@ sub getReportFile
 	{
 		return "";
 	}
-	my $itemsPrinted = 0;
 	foreach my $printListLine (@printListLines)
 	{
 		# vszd|Convert DISCARD Items CSDCA3|201202080921|OK|ADMIN|cvtdiscard|0||
