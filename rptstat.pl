@@ -110,6 +110,8 @@ EOF
 sub getDate($)
 {
 	my $d = shift;
+	# override any report date requests with the user's date selection.
+	return $opt{'d'} if ($opt{'d'});
 	if ($d eq "")
 	{
 		my $date = `transdate -d-0`;
@@ -142,7 +144,7 @@ my $date               = `transdate -d+0`;       # current date preseed.
 chomp($date);
 my @reportList;                                  # list of reports we want results from.
 my $options;                                     # Hash ref to the users switches for report output (all num switches)
-my $externSymbol       = qq{%};                   # symbol that this is an external report not found in printlist.
+my $externSymbol       = qq{%};                  # symbol that this is an external report not found in printlist.
 
 # Kicks off the setting of various switches.
 # param:  
@@ -215,8 +217,13 @@ if ($opt{'i'})
 		}
 		elsif ($name =~ m/^($externSymbol)/)
 		{
+			if($script eq "")
+			{
+				print STDERR "*** warning: nothing to do for request on line $lineCount***\n";
+			}
 			my $bareName = substr($name, length($externSymbol));
-			searchExternally($bareName, $date, $options, $script);
+			$opt{'s'} = " ";
+			searchExternally($bareName, $date, $options, $opt{'s'});
 		}
 		else
 		{
@@ -228,6 +235,10 @@ else # just one report requested by -n on the command line.
 {
 	if ($opt{'n'} =~ m/^($externSymbol)/)
 	{
+		if (! $opt{'s'})
+		{
+			print STDERR "*** warning: nothing to do, did you forget to mention a script?***\n";
+		}
 		my $bareName = substr($opt{'n'}, length($externSymbol));
 		searchExternally($bareName, $date, $options, $opt{'s'});
 	}
@@ -250,9 +261,9 @@ else # just one report requested by -n on the command line.
 sub searchExternally
 {
 	my ($name, $date, $options, $script) = @_;
-	my $record = "----|$name|$date|UNKNOWN|UNKNOWN|$script|0||";
-	my $itemsPrinted = getRptMetaData($opt{'o'}, $record);
-	if ($script ne "")
+	my $itemsPrinted = 0;
+	$itemsPrinted = getRptMetaData($opt{'o'}, "----|$name|$date|UNKNOWN|UNKNOWN|$script|0||")if ($opt{'o'});
+	if (defined($script) and $script ne "")
 	{
 		# we can't just print what the script does becaue when no other option is picked
 		# it can return a new line and nothing else which means it failed.
