@@ -36,6 +36,8 @@ sub usage()
 {
     print STDERR << "EOF";
 
+usage: $0 [-x] [-d ascii_date] [-2345789[aAbBcDghHiIMmopstTu]] [-i file] [-D]
+	
 This script takes the name, or partial name of a report finds it by date
 (default today) and outputs the results to STDOUT. The 3rd field in the -i file
 can include a script to run who's output will be printed first. If the script requires
@@ -43,8 +45,6 @@ the current report as an argument, then use the \@ character as a placeholder fo
 name of the report being reported on.
 Example: './count.pl -i \@.prn -s "\.email"' will run the script with \@ symbol expanded to:
 './count.pl -i /s/sirsi/Unicorn/Rptprint/xast.prn -s "\.email"'.
-
-usage: $0 [-x] [-d ascii_date] [-n report_name] [-2345789[aAbBcDghHiIMmopstTu]] [-i file] [-D]
 
  -d yyyymmdd : checks the reports for a specific day (ANSI date format)
  -i file     : UNFINISHED input file of stats you want to collect. Should be formated as:
@@ -56,7 +56,6 @@ usage: $0 [-x] [-d ascii_date] [-n report_name] [-2345789[aAbBcDghHiIMmopstTu]] 
                Holds Notices|20120614|./script.pl -e|9N|
                which would print the output from script.pl -e as the results in addition
                to the codes you specify. You may get unpredictable results depending on the executable's behaviour.
- -n name     : name (or partial name) of report.
  -o          : output capital letters for report meta data lowercase for report results:
                d - date ascii
                D - date and time ascii
@@ -95,8 +94,9 @@ usage: $0 [-x] [-d ascii_date] [-n report_name] [-2345789[aAbBcDghHiIMmopstTu]] 
  -s script   : script that you want to run.
  -x          : this (help) message
 
-example: $0 -d 20120324 -n "Generalized Bill" -5u -s"count.pl -i @.log -s\"\.email\"" 
-         $0 -n"Convert DISCARD" -odr -s"count.pl -i @.log -s\"WOOCA6\"" -d-1
+example: echo "Generalized Bill" | $0 -d 20120324 -5u -s"count.pl -i @.log -s\"\.email\"" 
+         cat reports.lst | $0 -odr -s"count.pl -i @.log -s\"WOOCA6\"" -d-1
+		 $0 -i weekday.stats -odr
 EOF
     exit;
 }
@@ -104,25 +104,24 @@ EOF
 #
 # Returns the date based on the request of either 'yyyymmdd' or '-n', where
 # 'n' is the number of days in the past that the required report was run.
+# Side effect to set the -d flag. Will exit if invalid date specified.
 # param:  string of ANSI date to '-n' format.
-# return: requested date.
+# return:
 #
-sub getDate($)
+sub setDate($)
 {
 	my $d = shift;
-	# override any report date requests with the user's date selection.
-	return $opt{'d'} if ($opt{'d'});
-	if ($d eq "")
+	if (!defined($d) or $d eq "") 
 	{
 		my $date = `transdate -d-0`;
 		chomp($date);
 		print "     -$date-\n" if ($opt{'D'});
-		return $date;
+		$opt{'d'} = $date;
 	}
 	elsif ($d =~ m/\d{8}/)
 	{
 		print "     -$d-\n" if ($opt{'D'});
-		return $d;
+		$opt{'d'} = $d;
 	}
 	elsif (substr($d, 0, 1) eq "-") # date from some 'N' days ago.
 	{
@@ -130,19 +129,21 @@ sub getDate($)
 		my $date = `transdate -d-$numDays`;
 		chomp($date);
 		print "     -$date- -$numDays-\n" if ($opt{'D'});
-		return $date;
+		$opt{'d'} = $date;
 	}
-	print STDERR "Invalid date specified.\n";
-	return "";
+	else
+	{
+		print STDERR "***Invalid date specified.***\n";
+		exit(0);
+	}
 }
 
 # use this next line for production.
 my $listDir            = `getpathname rptprint`;
 chomp($listDir);
 my $printList          = qq{$listDir/printlist};
-my $date               = `transdate -d+0`;       # current date preseed.
-chomp($date);
-my @reportList;                                  # list of reports we want results from.
+my @requestedReports;                                  # list of reports we want results from.
+my @printListLines;                              # list of printed reports from printlist.
 my $options;                                     # Hash ref to the users switches for report output (all num switches)
 my $externSymbol       = qq{%};                  # symbol that this is an external report not found in printlist.
 
@@ -151,54 +152,88 @@ my $externSymbol       = qq{%};                  # symbol that this is an extern
 # return: 
 sub init
 {
-    my $opt_string = 'Dd:i:n:o:s:x2:3:4:5:7:8:9:';
+    my $opt_string = 'Dd:i:o:s:x2:3:4:5:7:8:9:';
     getopts( "$opt_string", \%opt ) or usage();
-    usage() if ($opt{'x'} or (!$opt{'n'} and !$opt{'i'})); # Must have a name or a config that must have a name.
-    $date = getDate($opt{'d'}) if ($opt{'d'});
+    usage() if ($opt{'x'}); # Must have a name or a config that must have a name.
+    if ($opt{'d'})
+	{
+		setDate($opt{'d'});                                # Validate date.
+	}
+	else
+	{
+		setDate("");
+	}
 	if ($opt{'i'})
 	{
-		open REPORT_LIST, "<$opt{'i'}" or die "Error: unable to open input report list: $!\n";
-		# skip empty or lines that start with #
-		while (<REPORT_LIST>)
-		{
-			if ($_ =~ m/^ / or $_ =~ m/^#/ or $_ eq "\n")
-			{
-				next;
-			}
-			push(@reportList, $_);
-		}
-		close REPORT_LIST;
+		open(STDIN, "<$opt{'i'}") or die "Error: unable to open input report list: $!\n";
 	}
-	$options = getCmdLineOptionsForResults();
+	# Now read in the names of the reports you want.
+	my @array = <STDIN>;
+	close(STDIN);
+	foreach my $report (@array)
+	{
+		# skip blank lines and comments.
+		next if ($report =~ m/^ / or $report =~ m/^#/ or $report eq "\n");
+		chomp($report);
+		push(@requestedReports, $report);
+	}
 }
+
+# Validates report names. Must not be empty but can have special symbol.
+# Side effect: sets $opt{'n'}.
+# param:  report name string - name or partial name of the report.
+# return:
+sub setName($)
+{
+	my $name = shift;
+	if ($name ne "")
+	{
+		$opt{'n'} = $name;
+	}
+	else
+	{
+		print STDERR "***error: un-named report request.***\n";
+		exit(0);
+	}
+}
+
+# Sets the script name. So far not implemented.
+# Side effects: sets $opt{'s'}.
+# param:  name of the script to run. Passing "" will erase any value stored in $opt{'s'}.
+# return:
+sub setScript
+{
+	$opt{'s'} = shift;
+}
+
+
 init();
 
 open(PRINTLIST, $printList) || die "Failed to open $printList: $!\n";
-my @printListLines = <PRINTLIST>;
+@printListLines = <PRINTLIST>;
 close(PRINTLIST);
 
-if ($opt{'i'})
+foreach my $reportListEntry (@requestedReports)
 {
-	my $lineCount = 1;
-	foreach my $reportListEntry (@reportList)
+	$options = {}; # new hash ref for options unique to each line report.
+	my @optionList = split('\|', $reportListEntry);
+	if (@optionList < 3)
 	{
-		$options = {}; # new hash ref for options unique to each line.
-		my @optionList = split('\|', $reportListEntry);
-		if (@optionList < 3)
-		{
-			print STDERR "malformed input file $opt{'i'} on line $lineCount\n";
-			exit 0;
-		}
-		$lineCount++;
-		my $name   = $optionList[0];
-		my $d      = $optionList[1];
-		my $script = $optionList[2];
+		# This is a request from the command line other than with switches.
+		setName($reportListEntry);
+		# fill the options from the command line. 
+		$options = getCmdLineOptionsForResults();
+	}
+	else
+	{
+		setName($optionList[0]);
+		setDate($optionList[1]);
+		setScript($optionList[2]);
 		# make sure these options don't get passed on to the search.
 		shift(@optionList);
 		shift(@optionList);
 		shift(@optionList);
-		$date = getDate($d);
-		# fill the options
+		# fill the options from the configuration file entry.
 		foreach my $o (@optionList)
 		{
 			# Split the '5u' pairs and populate options hash 
@@ -210,74 +245,10 @@ if ($opt{'i'})
 				$options->{$switchCode[0]} = $switchCode[1];
 			}
 		}
-		# Do we run this as a stand alone command or do we search print list?
-		if ($name eq "")
-		{
-			print STDERR "*** error: ignoring un-named report request on line $lineCount***\n";
-		}
-		elsif ($name =~ m/^($externSymbol)/)
-		{
-			if($script eq "")
-			{
-				print STDERR "*** warning: nothing to do for request on line $lineCount***\n";
-			}
-			my $bareName = substr($name, length($externSymbol));
-			$opt{'s'} = " ";
-			searchExternally($bareName, $date, $options, $opt{'s'});
-		}
-		else
-		{
-			searchPrintList($name, $date, $options, $script, @printListLines);
-		}
 	}
-}
-else # just one report requested by -n on the command line.
-{
-	if ($opt{'n'} =~ m/^($externSymbol)/)
-	{
-		if (! $opt{'s'})
-		{
-			print STDERR "*** warning: nothing to do, did you forget to mention a script?***\n";
-		}
-		my $bareName = substr($opt{'n'}, length($externSymbol));
-		searchExternally($bareName, $date, $options, $opt{'s'});
-	}
-	else
-	{
-		searchPrintList($opt{'n'}, $date, $options, $opt{'s'}, @printListLines);
-	}
+	searchPrintList($opt{'n'}, $opt{'d'}, $options, $opt{'s'}, @printListLines);
 }
 1;
-
-# Runs an external script based on a request for '$Reporting Script Name||script||'
-# param:  name string name that will appear in output if -or is selected.
-# param:  date ANSI date - the user can specify a date but that can't be varified by 
-#         rptstat.pl since the optional included script is run now, but who knows
-#         when the data it produces was created.
-# param:  options string ignored.
-# param:  script - string command to run to produce stats.
-# return: 
-#
-sub searchExternally
-{
-	my ($name, $date, $options, $script) = @_;
-	my $itemsPrinted = 0;
-	$itemsPrinted = getRptMetaData($opt{'o'}, "----|$name|$date|UNKNOWN|UNKNOWN|$script|0||")if ($opt{'o'});
-	if (defined($script) and $script ne "")
-	{
-		# we can't just print what the script does becaue when no other option is picked
-		# it can return a new line and nothing else which means it failed.
-		my $runThis = qq{$script};
-		my $sResults = `$runThis`;
-		print $sResults;
-		chomp($sResults);
-		$itemsPrinted += 1 if ($sResults ne "");
-	}
-	if ($itemsPrinted > 0)
-	{
-		print "\n";
-	}
-}
 
 #
 # Perhaps no surprise that this runs the search based on the input parameters.
@@ -326,6 +297,29 @@ sub searchPrintList
 				print "\n";
 			}
 		}
+	}
+	# there is no report. Hmm is it a special request?
+	elsif ($name =~ m/^($externSymbol)/)
+	{
+		my $n = substr($name, length($externSymbol));
+		$cmdLine = "";
+		# Stop warnings about script strings that are empty.
+		if (!defined($script) or $script eq "")
+		{
+			$itemsPrinted = getRptMetaData($opt{'o'}, "----|$n|$date|UNKNOWN|UNKNOWN|none|0||");
+		}
+		else
+		{
+			$itemsPrinted = getRptMetaData($opt{'o'}, "----|$n|$date|UNKNOWN|UNKNOWN|$script|0||");
+			# we can't just print what the script does becaue when no other option is picked
+			# it can return a new line and nothing else which means it failed.
+			$cmdLine = qq{$script};
+			my $sResults = `$cmdLine`;
+			print $sResults;
+			chomp($sResults);
+			$itemsPrinted += 1 if ($sResults ne "");
+		}
+		print "\n"; # run or not we print a new line.
 	}
 	else # Print that the report is not available.
 	{
