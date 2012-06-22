@@ -104,23 +104,24 @@ EOF
 #
 # Returns the date based on the request of either 'yyyymmdd' or '-n', where
 # 'n' is the number of days in the past that the required report was run.
+# Side effect to set the -d flag. Will exit if invalid date specified.
 # param:  string of ANSI date to '-n' format.
-# return: requested date.
+# return:
 #
 sub getDate($)
 {
 	my $d = shift;
-	if ($d eq "")
+	if (!defined($d) or $d eq "") 
 	{
 		my $date = `transdate -d-0`;
 		chomp($date);
 		print "     -$date-\n" if ($opt{'D'});
-		return $date;
+		$opt{'d'} = $date;
 	}
 	elsif ($d =~ m/\d{8}/)
 	{
 		print "     -$d-\n" if ($opt{'D'});
-		return $d;
+		$opt{'d'} = $d;
 	}
 	elsif (substr($d, 0, 1) eq "-") # date from some 'N' days ago.
 	{
@@ -128,21 +129,22 @@ sub getDate($)
 		my $date = `transdate -d-$numDays`;
 		chomp($date);
 		print "     -$date- -$numDays-\n" if ($opt{'D'});
-		return $date;
+		$opt{'d'} = $date;
 	}
-	print STDERR "Invalid date specified.\n";
-	return "";
+	else
+	{
+		print STDERR "***Invalid date specified.***\n";
+		exit(0);
+	}
 }
 
 # use this next line for production.
 my $listDir            = `getpathname rptprint`;
 chomp($listDir);
 my $printList          = qq{$listDir/printlist};
-my $date               = `transdate -d+0`;       # current date preseed.
-chomp($date);
 my @reportList;                                  # list of reports we want results from.
 my $options;                                     # Hash ref to the users switches for report output (all num switches)
-my $externSymbol       = qq{%};                   # symbol that this is an external report not found in printlist.
+my $externSymbol       = qq{%};                  # symbol that this is an external report not found in printlist.
 
 # Kicks off the setting of various switches.
 # param:  
@@ -152,7 +154,14 @@ sub init
     my $opt_string = 'Dd:i:n:o:s:x2:3:4:5:7:8:9:';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ($opt{'x'} or (!$opt{'n'} and !$opt{'i'})); # Must have a name or a config that must have a name.
-    $date = getDate($opt{'d'}) if ($opt{'d'});
+    if ($opt{'d'})
+	{
+		getDate($opt{'d'});                                # Validate date.
+	}
+	else
+	{
+		getDate("");
+	}
 	if ($opt{'i'})
 	{
 		open REPORT_LIST, "<$opt{'i'}" or die "Error: unable to open input report list: $!\n";
@@ -195,7 +204,7 @@ if ($opt{'i'})
 		shift(@optionList);
 		shift(@optionList);
 		shift(@optionList);
-		$date = getDate($d);
+		getDate($d);
 		# fill the options
 		foreach my $o (@optionList)
 		{
@@ -211,16 +220,16 @@ if ($opt{'i'})
 		# Do we run this as a stand alone command or do we search print list?
 		if ($name eq "")
 		{
-			print STDERR "*** error: ignoring un-named report request on line $lineCount***\n";
+			print STDERR "***error: ignoring un-named report request on line $lineCount***\n";
 		}
 		elsif ($name =~ m/^($externSymbol)/)
 		{
 			my $bareName = substr($name, length($externSymbol));
-			searchExternally($bareName, $date, $options, $script);
+			searchExternally($bareName, $opt{'d'}, $options, $script);
 		}
 		else
 		{
-			searchPrintList($name, $date, $options, $script, @printListLines);
+			searchPrintList($name, $opt{'d'}, $options, $script, @printListLines);
 		}
 	}
 }
@@ -229,11 +238,11 @@ else # just one report requested by -n on the command line.
 	if ($opt{'n'} =~ m/^($externSymbol)/)
 	{
 		my $bareName = substr($opt{'n'}, length($externSymbol));
-		searchExternally($bareName, $date, $options, $opt{'s'});
+		searchExternally($bareName, $opt{'d'}, $options, $opt{'s'});
 	}
 	else
 	{
-		searchPrintList($opt{'n'}, $date, $options, $opt{'s'}, @printListLines);
+		searchPrintList($opt{'n'}, $opt{'d'}, $options, $opt{'s'}, @printListLines);
 	}
 }
 1;
