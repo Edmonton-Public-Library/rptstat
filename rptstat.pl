@@ -36,7 +36,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-usage: $0 [-x] [-d ascii_date] [-n report_name] [-2345789[aAbBcDghHiIMmopstTu]] [-i file] [-D]
+usage: $0 [-x] [-d ascii_date] [-2345789[aAbBcDghHiIMmopstTu]] [-i file] [-D]
 	
 This script takes the name, or partial name of a report finds it by date
 (default today) and outputs the results to STDOUT. The 3rd field in the -i file
@@ -56,7 +56,6 @@ Example: './count.pl -i \@.prn -s "\.email"' will run the script with \@ symbol 
                Holds Notices|20120614|./script.pl -e|9N|
                which would print the output from script.pl -e as the results in addition
                to the codes you specify. You may get unpredictable results depending on the executable's behaviour.
- -n name     : name (or partial name) of report.
  -o          : output capital letters for report meta data lowercase for report results:
                d - date ascii
                D - date and time ascii
@@ -95,8 +94,9 @@ Example: './count.pl -i \@.prn -s "\.email"' will run the script with \@ symbol 
  -s script   : script that you want to run.
  -x          : this (help) message
 
-example: $0 -d 20120324 -n "Generalized Bill" -5u -s"count.pl -i @.log -s\"\.email\"" 
-         $0 -n"Convert DISCARD" -odr -s"count.pl -i @.log -s\"WOOCA6\"" -d-1
+example: echo "Generalized Bill" | $0 -d 20120324 -5u -s"count.pl -i @.log -s\"\.email\"" 
+         cat reports.lst | $0 -odr -s"count.pl -i @.log -s\"WOOCA6\"" -d-1
+		 $0 -i weekday.stats -odr
 EOF
     exit;
 }
@@ -142,7 +142,8 @@ sub setDate($)
 my $listDir            = `getpathname rptprint`;
 chomp($listDir);
 my $printList          = qq{$listDir/printlist};
-my @reportList;                                  # list of reports we want results from.
+my @requestedReports;                                  # list of reports we want results from.
+my @printListLines;                              # list of printed reports from printlist.
 my $options;                                     # Hash ref to the users switches for report output (all num switches)
 my $externSymbol       = qq{%};                  # symbol that this is an external report not found in printlist.
 
@@ -151,9 +152,9 @@ my $externSymbol       = qq{%};                  # symbol that this is an extern
 # return: 
 sub init
 {
-    my $opt_string = 'Dd:i:n:o:s:x2:3:4:5:7:8:9:';
+    my $opt_string = 'Dd:i:o:s:x2:3:4:5:7:8:9:';
     getopts( "$opt_string", \%opt ) or usage();
-    usage() if ($opt{'x'} or (!$opt{'n'} and !$opt{'i'})); # Must have a name or a config that must have a name.
+    usage() if ($opt{'x'}); # Must have a name or a config that must have a name.
     if ($opt{'d'})
 	{
 		setDate($opt{'d'});                                # Validate date.
@@ -164,19 +165,18 @@ sub init
 	}
 	if ($opt{'i'})
 	{
-		open REPORT_LIST, "<$opt{'i'}" or die "Error: unable to open input report list: $!\n";
-		# skip empty or lines that start with #
-		while (<REPORT_LIST>)
-		{
-			if ($_ =~ m/^ / or $_ =~ m/^#/ or $_ eq "\n")
-			{
-				next;
-			}
-			push(@reportList, $_);
-		}
-		close REPORT_LIST;
+		open(STDIN, "<$opt{'i'}") or die "Error: unable to open input report list: $!\n";
 	}
-	$options = getCmdLineOptionsForResults();
+	# Now read in the names of the reports you want.
+	my @array = <STDIN>;
+	close(STDIN);
+	foreach my $report (@array)
+	{
+		# skip blank lines and comments.
+		next if ($report =~ m/^ / or $report =~ m/^#/ or $report eq "\n");
+		chomp($report);
+		push(@requestedReports, $report);
+	}
 }
 
 # Validates report names. Must not be empty but can have special symbol.
@@ -210,22 +210,22 @@ sub setScript
 init();
 
 open(PRINTLIST, $printList) || die "Failed to open $printList: $!\n";
-my @printListLines = <PRINTLIST>;
+@printListLines = <PRINTLIST>;
 close(PRINTLIST);
 
-if ($opt{'i'})
+foreach my $reportListEntry (@requestedReports)
 {
-	my $lineCount = 1;
-	foreach my $reportListEntry (@reportList)
+	$options = {}; # new hash ref for options unique to each line report.
+	my @optionList = split('\|', $reportListEntry);
+	if (@optionList < 3)
 	{
-		$options = {}; # new hash ref for options unique to each line.
-		my @optionList = split('\|', $reportListEntry);
-		if (@optionList < 3)
-		{
-			print STDERR "malformed input file $opt{'i'} on line $lineCount\n";
-			exit 0;
-		}
-		$lineCount++;
+		# This is a request from the command line other than with switches.
+		setName($reportListEntry);
+		# fill the options from the command line. 
+		$options = getCmdLineOptionsForResults();
+	}
+	else
+	{
 		setName($optionList[0]);
 		setDate($optionList[1]);
 		setScript($optionList[2]);
@@ -233,7 +233,7 @@ if ($opt{'i'})
 		shift(@optionList);
 		shift(@optionList);
 		shift(@optionList);
-		# fill the options
+		# fill the options from the configuration file entry.
 		foreach my $o (@optionList)
 		{
 			# Split the '5u' pairs and populate options hash 
@@ -245,12 +245,7 @@ if ($opt{'i'})
 				$options->{$switchCode[0]} = $switchCode[1];
 			}
 		}
-		# Do we run this as a stand alone command or do we search print list?
-		searchPrintList($opt{'n'}, $opt{'d'}, $options, $opt{'s'}, @printListLines);
 	}
-}
-else # just one report requested on the command line.
-{
 	searchPrintList($opt{'n'}, $opt{'d'}, $options, $opt{'s'}, @printListLines);
 }
 1;
