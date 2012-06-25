@@ -6,6 +6,8 @@ LOCAL=~/projects/rptstat/
 APP=rptstat.pl
 C_WEEKDAYS=weekday.stats
 C_WEEKENDS=weekend.stats
+C_SATURDAY=saturday.stats
+C_SUNDAY=sunday.stats
 
 put:
 	perl -c ${LOCAL}${APP}
@@ -17,6 +19,8 @@ test:
 push_all_configs:
 	scp ${LOCAL}${C_WEEKDAYS} ${USER}@${SERVER}:${REMOTE}
 	scp ${LOCAL}${C_WEEKENDS} ${USER}@${SERVER}:${REMOTE}
+	scp ${LOCAL}${C_SATURDAY} ${USER}@${SERVER}:${REMOTE}
+	scp ${LOCAL}${C_SUNDAY} ${USER}@${SERVER}:${REMOTE}
 push_weekday_configs:
 	scp ${LOCAL}${C_WEEKDAYS} ${USER}@${SERVER}:${REMOTE}
 push_weekend_configs:

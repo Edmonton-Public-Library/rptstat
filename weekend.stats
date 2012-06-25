@@ -14,7 +14,10 @@ Hold Pickup Reminder|-2||5u|
 Self Registration Activation Expiry Reminder|-2||9u|
 Hold Pickup Notices - 2 PM|-2||5u|
 Hold Pickup Notices - 9 PM|-2||5u|
-
+# SVA reports
+%Holds - FAILED||sva.pl -f|
+%Holds - SUCCESSFUL||sva.pl -s|
+%Holds - SUPERSEDED||sva.pl -p|
 
 # ===Sunday stats===
 Overdue Notices - Sat to Sun|-1||5u|
