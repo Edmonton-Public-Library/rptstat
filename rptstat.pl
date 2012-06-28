@@ -44,18 +44,18 @@ sub usage()
 {
     print STDERR << "EOF";
 
-usage: $0 [-x] [-d ascii_date] [-2345789[aAbBcDghHiIMmopstTu]] [-i file] [-D]
+usage: $0 [-x] [-d ascii_date] [-2345789[aAbBcDghHiIMmopstTu]] [-c file] [-D]
 	
 This script takes the name, or partial name of a report finds it by date
-(default today) and outputs the results to STDOUT. The 3rd field in the -i file
+(default today) and outputs the results to STDOUT. The 3rd field in the -c file
 can include a script to run who's output will be printed first. If the script requires
 the current report as an argument, then use the \@ character as a placeholder for the
 name of the report being reported on.
-Example: './count.pl -i \@.prn -s "\.email"' will run the script with \@ symbol expanded to:
-'./count.pl -i /s/sirsi/Unicorn/Rptprint/xast.prn -s "\.email"'.
+Example: './count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol expanded to:
+'./count.pl -c /s/sirsi/Unicorn/Rptprint/xast.prn -s "\.email"'.
 
  -d yyyymmdd : checks the reports for a specific day (ANSI date format)
- -i file     : UNFINISHED input file of stats you want to collect. Should be formated as:
+ -c file     : input config file of stats you want to collect. Should be formated as:
                name (required)|date (required but can be blank)|script and params (required but can be blank|code1|code2|...|codeN|
              Example: 
                Generalized bills|||5u|
@@ -102,9 +102,9 @@ Example: './count.pl -i \@.prn -s "\.email"' will run the script with \@ symbol 
  -s script   : script that you want to run.
  -x          : this (help) message
 
-example: echo "Generalized Bill" | $0 -d 20120324 -5u -s"count.pl -i @.log -s\"\.email\"" 
-         cat reports.lst | $0 -odr -s"count.pl -i @.log -s\"WOOCA6\"" -d-1
-		 $0 -i weekday.stats -odr
+example: echo "Generalized Bill" | $0 -d 20120324 -5u -s"count.pl -c @.log -s\"\.email\"" 
+         cat reports.lst | $0 -odr -s"count.pl -c @.log -s\"WOOCA6\"" -d-1
+		 $0 -c weekday.stats -odr
 EOF
     exit;
 }
@@ -160,7 +160,7 @@ my $externSymbol       = qq{%};                  # symbol that this is an extern
 # return: 
 sub init
 {
-    my $opt_string = 'Dd:i:o:s:x2:3:4:5:7:8:9:';
+    my $opt_string = 'Dd:c:o:s:x2:3:4:5:7:8:9:';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ($opt{'x'}); # Must have a name or a config that must have a name.
     if ($opt{'d'})
@@ -171,9 +171,9 @@ sub init
 	{
 		setDate("");
 	}
-	if ($opt{'i'})
+	if ($opt{'c'})
 	{
-		open(STDIN, "<$opt{'i'}") or die "Error: unable to open input report list: $!\n";
+		open(STDIN, "<$opt{'c'}") or die "Error: unable to open input report list: $!\n";
 	}
 	# Now read in the names of the reports you want.
 	my @array = <STDIN>;
@@ -465,7 +465,7 @@ sub getRptResults
 			# can easily enter wrong codes and switches in the file.
 			if (!defined($outParams{$code}) or !defined($switch))
 			{
-				print STDERR "Ignoring invalid switch or code (check -i file for errors or that the requested code is valid. See -x).\n";
+				print STDERR "Ignoring invalid switch or code (check -c file for errors or that the requested code is valid. See -x).\n";
 				return 0;
 			}
 			if ($line =~ m/\$<($outParams{$code})> \$\(130($switch)\)/)
