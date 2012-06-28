@@ -19,6 +19,14 @@ use vars qw/ %opt /;
 use Getopt::Std;
 use Switch;
 
+# Environment setup required by cron to run script because its daemon runs
+# without assuming any environment settings and we need to use sirsi's.
+###############################################
+# *** Edit these to suit your environment *** #
+$ENV{'PATH'} = ":/s/sirsi/Unicorn/Bincustom:/s/sirsi/Unicorn/Bin:/s/sirsi/Unicorn/Search/Bin:/export/home/oracle/product/10.2.0/bin:/usr/bin:/etc:/usr/ucb:/usr/sbin";
+$ENV{'UPATH'} = "/s/sirsi/Unicorn/Config/upath";
+###############################################
+
 # Id| Report name                   | Run date |Status|Owner|Script|
 # vtfs|Generalized Bill Notices Weekday|201202090552|OK|ADMIN|bill|0||
 # 1302	record(s) edited.
