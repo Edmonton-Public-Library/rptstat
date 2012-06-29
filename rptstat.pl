@@ -11,6 +11,7 @@
 # Author:  Andrew Nisbet, Edmonton Public Library.
 # Date:    May 25, 2012
 # Rev:     0.5 - develop
+#          0.5.1 - cleaned up environment variables.
 ########################################################################
 
 use strict;
@@ -18,13 +19,13 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 use Switch;
-my $VERSION = "0.5";
+my $VERSION = "0.5.1";
 
 # Environment setup required by cron to run script because its daemon runs
 # without assuming any environment settings and we need to use sirsi's.
 ###############################################
 # *** Edit these to suit your environment *** #
-$ENV{'PATH'} = ":/s/sirsi/Unicorn/Bincustom:/s/sirsi/Unicorn/Bin:/s/sirsi/Unicorn/Search/Bin:/export/home/oracle/product/10.2.0/bin:/usr/bin:/etc:/usr/ucb:/usr/sbin";
+$ENV{'PATH'} = ":/s/sirsi/Unicorn/Bincustom:/s/sirsi/Unicorn/Bin:/s/sirsi/Unicorn/Search/Bin";
 $ENV{'UPATH'} = "/s/sirsi/Unicorn/Config/upath";
 ###############################################
 
