@@ -11,7 +11,8 @@
 # Author:  Andrew Nisbet, Edmonton Public Library.
 # Date:    May 25, 2012
 # Rev:     0.5 - develop
-#          0.5.1 - cleaned up environment variables.
+#          0.5.1 - cleaned up environment variables added warning message
+#          to remind user when scripts are user defined.
 ########################################################################
 
 use strict;
@@ -321,13 +322,15 @@ sub searchPrintList
 		my $n = substr($name, length($externSymbol));
 		$cmdLine = "";
 		# Stop warnings about script strings that are empty.
+		my $message = "";
+		$message = "USER_DEFINED_SCRIPT: " if ($opt{'w'});
 		if (!defined($script) or $script eq "")
 		{
-			$itemsPrinted = getRptMetaData($opt{'o'}, "----|USER_DEFINED_SCRIPT: $n|$date|UNKNOWN|UNKNOWN|none|0||");
+			$itemsPrinted = getRptMetaData($opt{'o'}, "----|".$message."$n|$date|UNKNOWN|UNKNOWN|none|0||");
 		}
 		else
 		{
-			$itemsPrinted = getRptMetaData($opt{'o'}, "----|USER_DEFINED_SCRIPT: $n|$date|UNKNOWN|UNKNOWN|$script|0||");
+			$itemsPrinted = getRptMetaData($opt{'o'}, "----|".$message."$n|$date|UNKNOWN|UNKNOWN|$script|0||");
 			# we can't just print what the script does becaue when no other option is picked
 			# it can return a new line and nothing else which means it failed.
 			$cmdLine = qq{$script};
