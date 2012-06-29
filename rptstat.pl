@@ -415,10 +415,60 @@ sub getRptMetaData
 			case 'o' { print "$printListRecord[4]|"; $count++ }
 			case 'n' { print "$printListRecord[5]|"; $count++ }
 			case 'c' { print "$printListRecord[0]|"; $count++ }
+			case 'e' { getEmailedCount($printListRecord[0], 1); $count++ }
+			case 'E' { getEmailedCount($printListRecord[0], 0); $count++ }
 			else     { print "" }
 		}
 	}
 	return $count;
+}
+
+# Searches for email activity in the prn file.
+# param:  code string - file code.
+# param:  isEmail integer - 0 means false anything else is true.
+# return:
+sub getEmailedCount
+{
+	my ($code, $isEmail) = @_;
+	# special reports scripts don't have codes so you wont find them.
+	return qq{0|} if ($code eq "----");
+	my $reportPrintFile = qq{$listDir/$code.prn};
+	my $reportLogFile   = qq{$listDir/$code.log};
+	my $emailCount = 0;
+	my $totalCount = 0;
+	# Total users in the log file,
+	open(RPTLOG, "<$reportLogFile") or die "*** error: $!\n";
+	while (<RPTLOG>)
+	{
+		if ($_ =~ m/\$<user> \$\(130[59]\)/)
+		{
+			$totalCount = trim(substr($_, 0, index($_, "<") -1));
+		}
+	}
+	close(RPTLOG);
+	# Total emails in prn file, so we have to search that too.
+	open(RPTPRINT, "<$reportPrintFile") or die "Error opening $reportPrintFile: $!\n";
+	while (<RPTPRINT>)
+	{
+		if ($_ =~ m/\.email/)
+		{
+			$emailCount++;
+		}
+	}
+	close(RPTPRINT);
+	if ($isEmail)
+	{
+		print $emailCount."|";
+	}
+	elsif ($totalCount > 0)
+	{
+		my $difference = $totalCount - $emailCount;
+		print $difference."|";
+	}
+	else
+	{
+		print qq{0|};
+	}
 }
 
 # This routine prints out the user's requested report results.
