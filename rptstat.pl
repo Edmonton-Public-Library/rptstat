@@ -10,7 +10,7 @@
 #
 # Author:  Andrew Nisbet, Edmonton Public Library.
 # Date:    May 25, 2012
-# Rev:     1.0 - develop
+# Rev:     0.5 - develop
 ########################################################################
 
 use strict;
@@ -18,6 +18,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 use Switch;
+my $VERSION = "0.5";
 
 # Environment setup required by cron to run script because its daemon runs
 # without assuming any environment settings and we need to use sirsi's.
@@ -44,7 +45,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-usage: $0 [-x] [-d ascii_date] [-2345789[aAbBcDghHiIMmopstTu]] [-c file] [-D] [-w]
+usage: $0 [-x] [-d ascii_date] [-2345789[aAbBcDghHiIMmopstTu]] [-c file] [-D] [-w] [-v]
 	
 This script takes the name, or partial name of a report finds it by date
 (default today) and outputs the results to STDOUT. The 3rd field in the -c file
@@ -100,6 +101,7 @@ Example: './count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol 
                a - useracnt
                s - userstatus
  -s script   : script that you want to run.
+ -v          : version (currently $VERSION).
  -w          : write warnings to STDERR.
  -x          : this (help) message
 
@@ -161,9 +163,14 @@ my $externSymbol       = qq{%};                  # symbol that this is an extern
 # return: 
 sub init
 {
-    my $opt_string = 'Dd:c:o:s:wx2:3:4:5:7:8:9:';
+    my $opt_string = 'Dd:c:o:s:vwx2:3:4:5:7:8:9:';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ($opt{'x'}); # Must have a name or a config that must have a name.
+	if ($opt{'v'})
+	{
+		print "$0 version: $VERSION\n";
+		exit;
+	}
     if ($opt{'d'})
 	{
 		setDate($opt{'d'});                                # Validate date.
