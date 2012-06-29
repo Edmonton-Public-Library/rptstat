@@ -10,7 +10,7 @@
 #
 # Author:  Andrew Nisbet, Edmonton Public Library.
 # Date:    May 25, 2012
-# Rev:     0.1 - develop
+# Rev:     1.0 - develop
 ########################################################################
 
 use strict;
@@ -44,7 +44,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-usage: $0 [-x] [-d ascii_date] [-2345789[aAbBcDghHiIMmopstTu]] [-c file] [-D]
+usage: $0 [-x] [-d ascii_date] [-2345789[aAbBcDghHiIMmopstTu]] [-c file] [-D] [-w]
 	
 This script takes the name, or partial name of a report finds it by date
 (default today) and outputs the results to STDOUT. The 3rd field in the -c file
@@ -100,9 +100,10 @@ Example: './count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol 
                a - useracnt
                s - userstatus
  -s script   : script that you want to run.
+ -w          : write warnings to STDERR.
  -x          : this (help) message
 
-example: echo "Generalized Bill" | $0 -d 20120324 -5u -s"count.pl -c @.log -s\"\.email\"" 
+example: echo "Generalized Bill" | $0 -d 20120324 -5u -s"count.pl -c @.log -s\"\.email\"" -w
          cat reports.lst | $0 -odr -s"count.pl -c @.log -s\"WOOCA6\"" -d-1
 		 $0 -c weekday.stats -odr
 EOF
@@ -160,7 +161,7 @@ my $externSymbol       = qq{%};                  # symbol that this is an extern
 # return: 
 sub init
 {
-    my $opt_string = 'Dd:c:o:s:x2:3:4:5:7:8:9:';
+    my $opt_string = 'Dd:c:o:s:wx2:3:4:5:7:8:9:';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ($opt{'x'}); # Must have a name or a config that must have a name.
     if ($opt{'d'})
@@ -217,7 +218,7 @@ sub setScript
 
 init();
 
-open(PRINTLIST, $printList) || die "Failed to open $printList: $!\n";
+open(PRINTLIST, $printList) || die "***error: failed to open $printList: $! ***\n";
 @printListLines = <PRINTLIST>;
 close(PRINTLIST);
 
@@ -314,11 +315,11 @@ sub searchPrintList
 		# Stop warnings about script strings that are empty.
 		if (!defined($script) or $script eq "")
 		{
-			$itemsPrinted = getRptMetaData($opt{'o'}, "----|$n|$date|UNKNOWN|UNKNOWN|none|0||");
+			$itemsPrinted = getRptMetaData($opt{'o'}, "----|USER_DEFINED_SCRIPT: $n|$date|UNKNOWN|UNKNOWN|none|0||");
 		}
 		else
 		{
-			$itemsPrinted = getRptMetaData($opt{'o'}, "----|$n|$date|UNKNOWN|UNKNOWN|$script|0||");
+			$itemsPrinted = getRptMetaData($opt{'o'}, "----|USER_DEFINED_SCRIPT: $n|$date|UNKNOWN|UNKNOWN|$script|0||");
 			# we can't just print what the script does becaue when no other option is picked
 			# it can return a new line and nothing else which means it failed.
 			$cmdLine = qq{$script};
@@ -331,7 +332,7 @@ sub searchPrintList
 	}
 	else # Print that the report is not available.
 	{
-		print STDERR "report '$name' from '$date' is not available.\n";
+		print STDERR "* warning: report '$name' from '$date' is not available. *\n" if ($opt{'w'});
 	}
 	return $itemsPrinted;
 }
@@ -415,8 +416,8 @@ sub getRptMetaData
 			case 'o' { print "$printListRecord[4]|"; $count++ }
 			case 'n' { print "$printListRecord[5]|"; $count++ }
 			case 'c' { print "$printListRecord[0]|"; $count++ }
-			case 'e' { getEmailedCount($printListRecord[0], 1); $count++ }
-			case 'E' { getEmailedCount($printListRecord[0], 0); $count++ }
+			case 'e' { getEmailedCount($printListRecord[0], $printListRecord[1], 1); $count++ }
+			case 'E' { getEmailedCount($printListRecord[0], $printListRecord[1], 0); $count++ }
 			else     { print "" }
 		}
 	}
@@ -429,7 +430,7 @@ sub getRptMetaData
 # return:
 sub getEmailedCount
 {
-	my ($code, $isEmail) = @_;
+	my ($code, $name, $isEmail) = @_;
 	# special reports scripts don't have codes so you wont find them.
 	return qq{0|} if ($code eq "----");
 	my $reportPrintFile = qq{$listDir/$code.prn};
@@ -437,7 +438,7 @@ sub getEmailedCount
 	my $emailCount = 0;
 	my $totalCount = 0;
 	# Total users in the log file,
-	open(RPTLOG, "<$reportLogFile") or die "*** error: $!\n";
+	open(RPTLOG, "<$reportLogFile") or die "*** error while processing '$name': $! ***\n";
 	while (<RPTLOG>)
 	{
 		if ($_ =~ m/\$<user> \$\(130[59]\)/)
@@ -446,8 +447,14 @@ sub getEmailedCount
 		}
 	}
 	close(RPTLOG);
-	# Total emails in prn file, so we have to search that too.
-	open(RPTPRINT, "<$reportPrintFile") or die "Error opening $reportPrintFile: $!\n";
+	# Total emails in prn file, so we have to search that too, but not all reports are notice reports.
+	if (not -e $reportPrintFile)
+	{
+		print STDERR "* warning: '$name' is not a notice report. *\n" if ($opt{'w'});
+		print qq{0|};
+		return;
+	}
+	open(RPTPRINT, "<$reportPrintFile") or die "*** error while processing '$name': $!\\n";
 	while (<RPTPRINT>)
 	{
 		if ($_ =~ m/\.email/)
@@ -515,7 +522,7 @@ sub getRptResults
 			# can easily enter wrong codes and switches in the file.
 			if (!defined($outParams{$code}) or !defined($switch))
 			{
-				print STDERR "Ignoring invalid switch or code (check -c file for errors or that the requested code is valid. See -x).\n";
+				print STDERR "* warning: Ignoring invalid switch or code (check -c file for errors or that the requested code is valid. See -x). *\n" if ($opt{'w'});
 				return 0;
 			}
 			if ($line =~ m/\$<($outParams{$code})> \$\(130($switch)\)/)
