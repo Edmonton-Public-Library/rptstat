@@ -13,6 +13,10 @@
 # Rev:     0.5 - develop
 #          0.5.1 - cleaned up environment variables added warning message
 #          to remind user when scripts are user defined.
+#          0.5.2 - added report renaming. You can change a report's name
+#          to anything so that you can store stats in a database by report ID
+#          or you can specify that for two identically named reports, one
+#          is for email and one is for snail mail.
 ########################################################################
 
 use strict;
@@ -20,7 +24,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 use Switch;
-my $VERSION = "0.5.1";
+my $VERSION = "0.5.2";
 
 # Environment setup required by cron to run script because its daemon runs
 # without assuming any environment settings and we need to use sirsi's.
@@ -47,8 +51,9 @@ sub usage()
 {
     print STDERR << "EOF";
 
-usage: $0 [-x] [-d ascii_date] [-2345789[aAbBcDghHiIMmopstTu]] [-c file] [-D] [-w] [-v]
+	usage: $0 [-x] [-d ascii_date] [-2345789[aAbBcDghHiIMmopstTu]] [-c file] [-D] [-w] [-v]
 	
+Version: $VERSION.
 This script takes the name, or partial name of a report finds it by date
 (default today) and outputs the results to STDOUT. The 3rd field in the -c file
 can include a script to run who's output will be printed first. If the script requires
@@ -63,6 +68,8 @@ Example: './count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol 
              Example: 
                Generalized bills|||5u|
                which would report the number of user's selected from today's report.
+               Generalized bills ->Generalized bills - snail mail|||5u|
+               which would report the same as above but change the name to 'Generalized bills - snail mail'
              Example:
                Holds Notices|20120614|./script.pl -e|9N|
                which would print the output from script.pl -e as the results in addition
@@ -155,7 +162,7 @@ sub setDate($)
 my $listDir            = `getpathname rptprint`;
 chomp($listDir);
 my $printList          = qq{$listDir/printlist};
-my @requestedReports;                                  # list of reports we want results from.
+my @requestedReports;                            # list of reports we want results from.
 my @printListLines;                              # list of printed reports from printlist.
 my $options;                                     # Hash ref to the users switches for report output (all num switches)
 my $externSymbol       = qq{%};                  # symbol that this is an external report not found in printlist.
@@ -165,7 +172,7 @@ my $externSymbol       = qq{%};                  # symbol that this is an extern
 # return: 
 sub init
 {
-    my $opt_string = 'Dd:c:o:s:vwx2:3:4:5:7:8:9:';
+    my $opt_string = 'Dd:c:o:s:vwx2:3:4:5:7:8:9:'; # *** -p is reserved for pseudonym don't use it as a cmd line option! ***
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ($opt{'x'}); # Must have a name or a config that must have a name.
 	if ($opt{'v'})
@@ -198,17 +205,26 @@ sub init
 }
 
 # Validates report names. Must not be empty but can have special symbol.
-# Side effect: sets $opt{'n'}.
+# If the user specifies '->' the string after the '->' is used as the 
+# name for the report on output.
+# Side effect: sets $opt{'n'}, set $opt{'p'} which is not a valid command line switch.
 # param:  report name string - name or partial name of the report.
 # return:
 sub setName($)
 {
 	my $name = shift;
-	if ($name ne "")
+	my @pseudonym = split("->", $name);
+	if (defined($pseudonym[1]))
 	{
-		$opt{'n'} = $name;
+		$opt{'p'} = $pseudonym[1];
 	}
-	else
+	# $pseudonym[0] will always contain the queryable report name even if user
+	# didn't specify a pseudoynm.
+	if ($pseudonym[0] ne "")
+	{
+		$opt{'n'} = $pseudonym[0];
+	}
+	else # happens if user enters "" or "->some other name"; lookup can't be empty.
 	{
 		print STDERR "***error: un-named report request.***\n";
 		exit(0);
@@ -422,13 +438,22 @@ sub getRptMetaData
 			# vszd|Convert DISCARD Items CSDCA3|201202080921|OK|ADMIN|cvtdiscard|0||
 			case 'D' { print "$printListRecord[2]|"; $count++ }
 			case 'd' { print substr($printListRecord[2], 0, 8)."|"; $count++ }
-			case 'r' { print "$printListRecord[1]|"; $count++ }
 			case 's' { print "$printListRecord[3]|"; $count++ }
 			case 'o' { print "$printListRecord[4]|"; $count++ }
 			case 'n' { print "$printListRecord[5]|"; $count++ }
 			case 'c' { print "$printListRecord[0]|"; $count++ }
 			case 'e' { getEmailedCount($printListRecord[0], $printListRecord[1], 1); $count++ }
 			case 'E' { getEmailedCount($printListRecord[0], $printListRecord[1], 0); $count++ }
+			case 'r' { if ($opt{'p'})
+						{	
+							print "$opt{'p'}|"; # prints the pseudonym instead of real name.
+						}
+						else
+						{
+							print "$printListRecord[1]|"; 
+						}
+						$count++;
+					}
 			else     { print "" }
 		}
 	}
