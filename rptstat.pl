@@ -17,6 +17,7 @@
 #          to anything so that you can store stats in a database by report ID
 #          or you can specify that for two identically named reports, one
 #          is for email and one is for snail mail.
+#          0.5.3 - adding db date time return option.
 ########################################################################
 
 use strict;
@@ -110,6 +111,7 @@ Example: './count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol 
                a - useracnt
                s - userstatus
  -s script   : script that you want to run.
+ -t          : use MySQL timestamp time convention for output "yyyy-mm-dd hh:mm:ss".
  -v          : version (currently $VERSION).
  -w          : write warnings to STDERR.
  -x          : this (help) message
@@ -119,6 +121,30 @@ example: echo "Generalized Bill" | $0 -d 20120324 -5u -s"count.pl -c @.log -s\"\
 		 $0 -c weekday.stats -odr
 EOF
     exit;
+}
+
+# Returns a timestamp for the log file only. The Database uses the default
+# time of writing the record for its timestamp in SQL. That was done to avoid
+# the snarl of differences between MySQL and Perl timestamp details.
+# Param:  ANSI time like yyyymmddhhmm
+# Return: string of the current date and time as: 'yyyy-mm-dd hh:mm:ss'
+sub getTimeAsMySQLTimeStamp($)
+{
+	my $ansiTime = shift;
+	my @date     = split('', $ansiTime);
+	my $year     = join('',@date[0..3]);
+	my $month    = join('',@date[4..5]);
+	my $day      = join('',@date[6..7]);
+	# some reports don't come with hour and minute resolution.
+	my $hour     = "00";
+	my $minute   = "00";
+	my $second   = "00";
+	if (@date > 8)
+	{
+		$hour  = join('',@date[8..9]);
+		$minute= join('',@date[10..11]);
+	}
+	return "$year-$month-$day $hour:$minute:$second";
 }
 
 #
@@ -172,7 +198,7 @@ my $externSymbol       = qq{%};                  # symbol that this is an extern
 # return: 
 sub init
 {
-    my $opt_string = 'Dd:c:o:s:vwx2:3:4:5:7:8:9:'; # *** -p is reserved for pseudonym don't use it as a cmd line option! ***
+    my $opt_string = 'Dd:c:o:s:tvwx2:3:4:5:7:8:9:'; # *** -p is reserved for pseudonym don't use it as a cmd line option! ***
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ($opt{'x'}); # Must have a name or a config that must have a name.
 	if ($opt{'v'})
@@ -436,8 +462,28 @@ sub getRptMetaData
 			# n - script name
 			# c - report code - 4 digit code for tracking.
 			# vszd|Convert DISCARD Items CSDCA3|201202080921|OK|ADMIN|cvtdiscard|0||
-			case 'D' { print "$printListRecord[2]|"; $count++ }
-			case 'd' { print substr($printListRecord[2], 0, 8)."|"; $count++ }
+			case 'D' { 
+				if ($opt{'t'})
+				{
+					print getTimeAsMySQLTimeStamp($printListRecord[2])."|";
+				}
+				else
+				{
+					print "$printListRecord[2]|"; 
+				}
+				$count++
+			}
+			case 'd' { 
+				if ($opt{'t'})
+				{
+					print getTimeAsMySQLTimeStamp( substr($printListRecord[2], 0, 8) )."|";
+				}
+				else
+				{
+					print substr($printListRecord[2], 0, 8)."|"; 
+				}
+				$count++;
+			}
 			case 's' { print "$printListRecord[3]|"; $count++ }
 			case 'o' { print "$printListRecord[4]|"; $count++ }
 			case 'n' { print "$printListRecord[5]|"; $count++ }
