@@ -1,12 +1,12 @@
-### List of reports to run at 22:00 hours.
-# This one needs to separated for use of different report output options '-E' and '-e'
-#EOverdue Notices - Weekdays->1|||
-#MOverdue Notices - Weekdays->2|||
+### List of reports to run at 21:15 hours.
+Overdue Notices - Weekdays->1|||0e|
+Overdue Notices - Weekdays->2|||0E|
+Overdue Notices - Sat to Sun->17|||
 Hold Pickup Notices - Monday->19|||5u|
 Hold Pickup Notices - Tues to Fri->3|||5u|
-# This one needs to separated for use of different report output options '-E' and '-e'
-#MGeneralized Bill Notices - Weekday->4|||
-#EGeneralized Bill Notices - Weekday->5|||
+Generalized Bill Notices - Sat to Sun->18|||5u|
+#Generalized Bill Notices - Weekday->4||0E| # needs to include script to count limited on <$10
+Generalized Bill Notices - Weekday->5||0e|
 Renewal Reminder->6|||9u|
 Preoverdue Courtesy Reminder->7|||5u|
 Expired Privilege Reminder - 30 Days->8|||9u|
