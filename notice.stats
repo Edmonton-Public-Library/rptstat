@@ -1,0 +1,17 @@
+### List of reports to run at 22:00 hours.
+# This one needs to separated for use of different report output options '-E' and '-e'
+#EOverdue Notices - Weekdays->1|||
+#MOverdue Notices - Weekdays->2|||
+Hold Pickup Notices - Monday->19|||5u|
+Hold Pickup Notices - Tues to Fri->3|||5u|
+# This one needs to separated for use of different report output options '-E' and '-e'
+#MGeneralized Bill Notices - Weekday->4|||
+#EGeneralized Bill Notices - Weekday->5|||
+Renewal Reminder->6|||9u|
+Preoverdue Courtesy Reminder->7|||5u|
+Expired Privilege Reminder - 30 Days->8|||9u|
+Overdue Reminder - 3 Days->9|||5u|
+Hold Pickup Reminder->10|||5u|
+Self Registration Activation Expiry Reminder->11|||9u|
+Hold Pickup Notices - 2 PM->12|||5u|
+Hold Pickup Notices - 9 PM->13|||5u|

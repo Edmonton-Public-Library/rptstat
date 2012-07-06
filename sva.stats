@@ -1,0 +1,6 @@
+# SVA reports must be collected BEFORE the sirsi tables are emptied at 22:15.
+# This doesn't get run on Sundays because it is a special script that will report every time it is run
+# Other rptstat configs report nothing because if there is no report nothing gets output.
+%Holds - FAILED->14||sva.pl -f|
+%Holds - SUCCESSFUL->15||sva.pl -s|
+%Holds - SUPERSEDED->16||sva.pl -p|
