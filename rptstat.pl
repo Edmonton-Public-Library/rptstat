@@ -16,8 +16,9 @@
 #          0.5.2 - added report renaming. You can change a report's name
 #          to anything so that you can store stats in a database by report ID
 #          or you can specify that for two identically named reports, one
-#          is for email and one is for snail mail.
-#          0.5.3 - adding db date time return option.
+#          is for email and one is for snail mail. Added db date time return option.
+#          0.5.3 - change -eE to -Oe and -0E for consistent report handling
+#          and simplier config files.
 ########################################################################
 
 use strict;
@@ -25,7 +26,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 use Switch;
-my $VERSION = "0.5.2";
+my $VERSION = "0.5.3";
 
 # Environment setup required by cron to run script because its daemon runs
 # without assuming any environment settings and we need to use sirsi's.
@@ -37,6 +38,7 @@ $ENV{'UPATH'} = "/s/sirsi/Unicorn/Config/upath";
 
 # Id| Report name                   | Run date |Status|Owner|Script|
 # vtfs|Generalized Bill Notices Weekday|201202090552|OK|ADMIN|bill|0||
+# 0     record emails from prn file.
 # 1302	record(s) edited.
 # 1303	record(s) printed.
 # 1304	item(s) printed.
@@ -52,7 +54,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: $0 [-x] [-d ascii_date] [-2345789[aAbBcDghHiIMmopstTu]] [-c file] [-D] [-w] [-v]
+	usage: $0 [-xwv] [-d ascii_date] [-23457890[aAbBcDEeghHiIMmopstTu]] [-odDeErsonc]
 	
 Version: $VERSION.
 This script takes the name, or partial name of a report finds it by date
@@ -78,6 +80,8 @@ Example: './count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol 
  -o          : output capital letters for report meta data lowercase for report results:
                d - date ascii
                D - date and time ascii
+			   e - emailed count
+			   E - mailed count
                r - report name
                s - status
                o - owner
@@ -90,6 +94,9 @@ Example: './count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol 
  -7 <code>   : records encountered
  -8 <code>   : records considered
  -9 <code>   : records selected
+ -0 <code>   : records mailed. Reported values appear before any other switch <code> selection. For example
+               echo Bill | $0 -5u -0e produces Generalized Bill Notices - Weekday|512|481|
+			   echo Bill | $0 -0e -5u produces Generalized Bill Notices - Weekday|512|481|
  code        : I - ascii
                A - authority
                B - bib
@@ -110,14 +117,17 @@ Example: './count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol 
                u - user
                a - useracnt
                s - userstatus
+               e - email prints out before any other switch code.
+               E - mail (printed notice) prints out before any other switch code.
  -s script   : script that you want to run.
  -t          : use MySQL timestamp time convention for output "yyyy-mm-dd hh:mm:ss".
  -v          : version (currently $VERSION).
  -w          : write warnings to STDERR.
  -x          : this (help) message
 
-example: echo "Generalized Bill" | $0 -d 20120324 -5u -s"count.pl -c @.log -s\"\.email\"" -w
+example: echo "Generalized Bill" | $0 -d 20120324 -5u -s"count.pl -c @.prn -s\"\.email\"" -w
          cat reports.lst | $0 -odr -s"count.pl -c @.log -s\"WOOCA6\"" -d-1
+		 echo "Overdue Notices->Mailed Overdue Notices" | $0 -odr -5u -0E
 		 $0 -c weekday.stats -odr
 EOF
     exit;
@@ -198,7 +208,7 @@ my $externSymbol       = qq{%};                  # symbol that this is an extern
 # return: 
 sub init
 {
-    my $opt_string = 'Dd:c:o:s:tvwx2:3:4:5:7:8:9:'; # *** -p is reserved for pseudonym don't use it as a cmd line option! ***
+    my $opt_string = 'd:c:o:s:tvwx2:3:4:5:7:8:9:0:'; # *** -p is reserved for pseudonym don't use it as a cmd line option! ***
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ($opt{'x'}); # Must have a name or a config that must have a name.
 	if ($opt{'v'})
@@ -330,9 +340,9 @@ sub searchPrintList
 	{
 		for my $reportKey ( keys %$reportHash )
 		{
-			my $report = $reportKey.".log";
+			# my $report = $reportKey.".log";
 			$itemsPrinted += getRptMetaData($opt{'o'}, $reportHash->{ $reportKey });
-			$itemsPrinted += getRptResults($report, $options);
+			$itemsPrinted += getRptResults($reportKey, $name, $options);
 			# now execute the script if there is one.
 			if (defined($script) and $script ne "")
 			{
@@ -341,7 +351,7 @@ sub searchPrintList
 				# now a user can use the '@' symbol to indicate that the 
 				# the name of the file is to be substituted. First we have
 				# replace any '@' with the path and name of the report.
-				print "\n$report==>and $reportKey\n" if ($opt{'D'});
+				print "\nreport==>$reportKey\n" if ($opt{'D'});
 				$cmdLine =~ s/@/$reportKey/g;
 				print STDERR "running script: '$cmdLine'\n" if ($opt{'D'});
 				# we can't just print what the script does becaue when no other option is picked
@@ -391,7 +401,7 @@ sub searchPrintList
 }
 
 # Gets the options for the type of results the user wants to display from the report.
-# param:  none
+# param:  
 # return: hash reference of all the -[0-9] switches and options.
 sub getCmdLineOptionsForResults
 {
@@ -410,6 +420,7 @@ sub getCmdLineOptionsForResults
 # default to today, and returns the name of the file and the entry from printlist.
 # param:  reportName - string the name of the report.
 # param:  date - requested date.
+# param:  printListLines List - list of all the printed reports in the printlist.
 # return: (the fully qualified path to the report file, entry from print list as a List)
 #         or an empty string if no suitable entry found.
 sub getReportFile
@@ -430,7 +441,7 @@ sub getReportFile
 		if ($printListEntry[1] =~ m/($rptName)/ and substr($printListEntry[2], 0, 8) eq $date)
 		{
 			# get it from the rptprint directory/wwqk.log
-			my $reportPath = qq{$listDir/$printListEntry[0]};
+			my $reportPath = qq{$printListEntry[0]};
 			$hashRef->{ $reportPath } = $printListLine;
 		}
 	}
@@ -461,6 +472,8 @@ sub getRptMetaData
 			# o - owner
 			# n - script name
 			# c - report code - 4 digit code for tracking.
+			# e - emailed patrons
+			# E - paper printed notice count
 			# vszd|Convert DISCARD Items CSDCA3|201202080921|OK|ADMIN|cvtdiscard|0||
 			case 'D' { 
 				if ($opt{'t'})
@@ -508,7 +521,8 @@ sub getRptMetaData
 
 # Searches for email activity in the prn file.
 # param:  code string - file code.
-# param:  isEmail integer - 0 means false anything else is true.
+# param:  name string - name of the report for reporting errors.
+# param:  isEmail integer - 0 (false) means mail or paper, anything else means emailed patron count.
 # return:
 sub getEmailedCount
 {
@@ -520,7 +534,7 @@ sub getEmailedCount
 	my $emailCount = 0;
 	my $totalCount = 0;
 	# Total users in the log file,
-	open(RPTLOG, "<$reportLogFile") or die "*** error while processing '$name': $! ***\n";
+	open(RPTLOG, "<$reportLogFile") or die "*** error while processing '$reportLogFile': $! ***\n";
 	while (<RPTLOG>)
 	{
 		if ($_ =~ m/\$<user> \$\(130[59]\)/)
@@ -536,7 +550,7 @@ sub getEmailedCount
 		print qq{0|};
 		return;
 	}
-	open(RPTPRINT, "<$reportPrintFile") or die "*** error while processing '$name': $!\\n";
+	open(RPTPRINT, "<$reportPrintFile") or die "*** error while processing '$reportPrintFile': $!\\n";
 	while (<RPTPRINT>)
 	{
 		if ($_ =~ m/\.email/)
@@ -561,13 +575,14 @@ sub getEmailedCount
 }
 
 # This routine prints out the user's requested report results.
-# param: reportFile - string of the name of the file we are getting results from.
-# param: outParams - string of requested codes.
-# param: printListRecord - list from print list formatted as:
-#        vszd|Convert DISCARD Items CSDCA3|201202080921|OK|ADMIN|cvtdiscard|0||
+# param:  report - string code of the name of the file we are getting results from.
+# param:  options - hash reference of requested switches and their codes.
+# param:  name - string name of report. Passed to the function that counts emails.
+# return: 
 sub getRptResults
 {
-	my ($reportFile, $options) = @_;
+	my ($reportCode, $name, $options) = @_;
+	my $reportFile = qq{$listDir/$reportCode.log};
 	my $count = 0;
 	my %outParams = (
 		'I'=>"ascii",
@@ -590,7 +605,19 @@ sub getRptResults
 		'u'=>"user",
 		'a'=>"useracnt",
 		's'=>"userstatus",
+		'e'=>"emailed", #not required handled by a separate check operation.
+		'E'=>"printed", #not required handled by a separate check operation.
 	);
+	# print out the requested email counts first.
+	if ( $options->{'0'} and $options->{'0'} eq "e" )
+	{ 
+		$count++ if (getEmailedCount($reportCode, $name, 1));
+	} # emailed patrons.
+	if ( $options->{'0'} and $options->{'0'} eq "E" )
+	{ 
+		$count++ if (getEmailedCount($reportCode, $name, 0));
+	} # mailed patrons.
+	# do the rest of the options (if any)
 	open(REPORT, "<$reportFile") or die "Error opening $reportFile: $!\n";
 	my @log = <REPORT>;
 	close(REPORT);
@@ -604,7 +631,7 @@ sub getRptResults
 			# can easily enter wrong codes and switches in the file.
 			if (!defined($outParams{$code}) or !defined($switch))
 			{
-				print STDERR "* warning: Ignoring invalid switch or code (check -c file for errors or that the requested code is valid. See -x). *\n" if ($opt{'w'});
+				print STDERR "*** error: '$switch' or '$code' is invalid (check config file for errors or that the requested code is valid. See -x). ***\n";
 				return 0;
 			}
 			if ($line =~ m/\$<($outParams{$code})> \$\(130($switch)\)/)
