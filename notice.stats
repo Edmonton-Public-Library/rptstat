@@ -5,8 +5,8 @@ Overdue Notices - Sat to Sun->17|||
 Hold Pickup Notices - Monday->19|||5u|
 Hold Pickup Notices - Tues to Fri->3|||5u|
 Generalized Bill Notices - Sat to Sun->18|||5u|
-#Generalized Bill Notices - Weekday->4||0E| # needs to include script to count limited on <$10
-Generalized Bill Notices - Weekday->5||0e|
+Generalized Bill Notices - Weekday->4||count.pl -i /s/sirsi/Unicorn/Rptprint/@.prn -d">10"|
+Generalized Bill Notices - Weekday->5|||0e|
 Renewal Reminder->6|||9u|
 Preoverdue Courtesy Reminder->7|||5u|
 Expired Privilege Reminder - 30 Days->8|||9u|
