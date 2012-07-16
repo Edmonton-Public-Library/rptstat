@@ -1,5 +1,5 @@
 #!/s/sirsi/Unicorn/Bin/perl -w
-########################################################################
+###########################################################################################
 # Purpose: Get results of a given report report.
 # Method:  The script reads the printlist searching for Convert discards
 #          reports for a user specified day (default: today). It then
@@ -19,7 +19,8 @@
 #          is for email and one is for snail mail. Added db date time return option.
 #          0.5.3 - change -eE to -Oe and -0E for consistent report handling
 #          and simplier config files.
-########################################################################
+#          0.5.4 - added -d* to show results of all available named reports result display. 
+############################################################################################
 
 use strict;
 use warnings;
@@ -54,7 +55,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: $0 [-xwv] [-d ascii_date] [-23457890[aAbBcDEeghHiIMmopstTu]] [-odDeErsonc]
+	usage: $0 [-xwv] [-d [-n|*|ascii_date]] [-23457890[aAbBcDEeghHiIMmopstTu]] [-odDeErsonc]
 	
 Version: $VERSION.
 This script takes the name, or partial name of a report finds it by date
@@ -66,6 +67,8 @@ Example: './count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol 
 './count.pl -c /s/sirsi/Unicorn/Rptprint/xast.prn -s "\.email"'.
 
  -d yyyymmdd : checks the reports for a specific day (ANSI date format)
+ -d -n       : report from 'n' days ago.
+ -d *        : all named reports currently available.
  -c file     : input config file of stats you want to collect. Should be formated as:
                name (required)|date (required but can be blank)|script and params (required but can be blank|code1|code2|...|codeN|
              Example: 
@@ -185,6 +188,12 @@ sub setDate($)
 		my $date = `transdate -d-$numDays`;
 		chomp($date);
 		print "     -$date- -$numDays-\n" if ($opt{'D'});
+		$opt{'d'} = $date;
+	}
+	elsif (substr($d, 0, 1) eq "*") # all recorded named reports.
+	{
+		my $date = "9999";
+		print "     -$date- -any time-\n" if ($opt{'D'});
 		$opt{'d'} = $date;
 	}
 	else
@@ -395,7 +404,14 @@ sub searchPrintList
 	}
 	else # Print that the report is not available.
 	{
-		print STDERR "* warning: report '$name' from '$date' is not available. *\n" if ($opt{'w'});
+		if ($date eq "9999")
+		{
+			print STDERR "* warning: no record of report '$name' found. *\n" if ($opt{'w'});
+		}
+		else
+		{
+			print STDERR "* warning: report '$name' from '$date' is not available. *\n" if ($opt{'w'});
+		}
 	}
 	return $itemsPrinted;
 }
@@ -438,11 +454,14 @@ sub getReportFile
 		my @printListEntry = split('\|', $printListLine);
 		# field 5 (0 indexed) contains the last run date and 
 		# if the time stamp the report ran matches the specified ascii date, and the name matches:
-		if ($printListEntry[1] =~ m/($rptName)/ and substr($printListEntry[2], 0, 8) eq $date)
+		if ($date eq "9999" or substr($printListEntry[2], 0, 8) eq $date)
 		{
-			# get it from the rptprint directory/wwqk.log
-			my $reportPath = qq{$printListEntry[0]};
-			$hashRef->{ $reportPath } = $printListLine;
+			if ($printListEntry[1] =~ m/($rptName)/ )
+			{
+				# get it from the rptprint directory/wwqk.log
+				my $reportPath = qq{$printListEntry[0]};
+				$hashRef->{ $reportPath } = $printListLine;
+			}
 		}
 	}
 	return $hashRef;
