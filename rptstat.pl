@@ -83,8 +83,8 @@ Example: './count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol 
  -o          : output capital letters for report meta data lowercase for report results:
                d - date ascii
                D - date and time ascii
-			   e - emailed count
-			   E - mailed count
+               e - emailed count
+               E - mailed count
                r - report name
                s - status
                o - owner
@@ -99,7 +99,7 @@ Example: './count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol 
  -9 <code>   : records selected
  -0 <code>   : records mailed. Reported values appear before any other switch <code> selection. For example
                echo Bill | $0 -5u -0e produces Generalized Bill Notices - Weekday|512|481|
-			   echo Bill | $0 -0e -5u produces Generalized Bill Notices - Weekday|512|481|
+               echo Bill | $0 -0e -5u produces Generalized Bill Notices - Weekday|512|481|
  code        : I - ascii
                A - authority
                B - bib
