@@ -19,7 +19,8 @@
 #          is for email and one is for snail mail. Added db date time return option.
 #          0.5.3 - change -eE to -Oe and -0E for consistent report handling
 #          and simplier config files.
-#          0.5.4 - added -d* to show results of all available named reports result display. 
+#          0.5.4 - added -d* to show results of all available named reports result display.
+#          Fixed '@' bug that didn't include full path to file on substitution match.
 ############################################################################################
 
 use strict;
@@ -27,7 +28,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 use Switch;
-my $VERSION = "0.5.3";
+my $VERSION = "0.5.4";
 
 # Environment setup required by cron to run script because its daemon runs
 # without assuming any environment settings and we need to use sirsi's.
