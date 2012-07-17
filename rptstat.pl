@@ -130,8 +130,8 @@ Example: './count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol 
 
 example: echo "Generalized Bill" | $0 -d 20120324 -5u -s"count.pl -c @.prn -s\"\.email\"" -w
          cat reports.lst | $0 -odr -s"count.pl -c @.log -s\"WOOCA6\"" -d-1
-		 echo "Overdue Notices->Mailed Overdue Notices" | $0 -odr -5u -0E
-		 $0 -c weekday.stats -odr
+         echo "Overdue Notices->Mailed Overdue Notices" | $0 -odr -5u -0E
+         $0 -c weekday.stats -odr
 EOF
     exit;
 }
