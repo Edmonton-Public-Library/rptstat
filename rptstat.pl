@@ -388,7 +388,8 @@ sub searchPrintList
 				# the name of the file is to be substituted. First we have
 				# replace any '@' with the path and name of the report.
 				print "\nreport==>$reportKey\n" if ($opt{'D'});
-				$cmdLine =~ s/@/$reportKey/g;
+				my $reportPath = qq{$listDir/$reportKey};
+				$cmdLine =~ s/@/$reportPath/g;
 				print STDERR "running script: '$cmdLine'\n" if ($opt{'D'});
 				# we can't just print what the script does becaue when no other option is picked
 				# it can return a new line and nothing else which means it failed.

@@ -1,0 +1,17 @@
+# Makes a new Clean HOLDS report for each branch. Run rptstat as: rptstat.pl -oc -c cleanhold.stats
+Custom Clean Hold Shelf:EPLWOO||/usr/bin/cat ./t.head >./WOO_cleanholdshelf.txt; /usr/bin/tail +4 @.prn >>./WOO_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLWMC||/usr/bin/cat ./t.head >./WMC_cleanholdshelf.txt; /usr/bin/tail +4 @.prn >>./WMC_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLSTR||/usr/bin/cat ./t.head >./STR_cleanholdshelf.txt; /usr/bin/tail +4 @.prn >>./STR_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLSPW||/usr/bin/cat ./t.head >./SPW_cleanholdshelf.txt; /usr/bin/tail +4 @.prn >>./SPW_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLRIV||/usr/bin/cat ./t.head >./RIV_cleanholdshelf.txt; /usr/bin/tail +4 @.prn >>./RIV_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLMNA||/usr/bin/cat ./t.head >./MNA_cleanholdshelf.txt; /usr/bin/tail +4 @.prn >>./MNA_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLMLW||/usr/bin/cat ./t.head >./MLW_cleanholdshelf.txt; /usr/bin/tail +4 @.prn >>./MLW_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLLON||/usr/bin/cat ./t.head >./LON_cleanholdshelf.txt; /usr/bin/tail +4 @.prn >>./LON_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLLHL||/usr/bin/cat ./t.head >./LHL_cleanholdshelf.txt; /usr/bin/tail +4 @.prn >>./LHL_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLJPL||/usr/bin/cat ./t.head >./JPL_cleanholdshelf.txt; /usr/bin/tail +4 @.prn >>./JPL_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLIDY||/usr/bin/cat ./t.head >./IDY_cleanholdshelf.txt; /usr/bin/tail +4 @.prn >>./IDY_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLHIG||/usr/bin/cat ./t.head >./HIG_cleanholdshelf.txt; /usr/bin/tail +4 @.prn >>./HIG_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLCSD||/usr/bin/cat ./t.head >./CSD_cleanholdshelf.txt; /usr/bin/tail +4 @.prn >>./CSD_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLCPL||/usr/bin/cat ./t.head >./CPL_cleanholdshelf.txt; /usr/bin/tail +4 @.prn >>./CPL_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLCAL||/usr/bin/cat ./t.head >./CAL_cleanholdshelf.txt; /usr/bin/tail +4 @.prn >>./CAL_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLABB||/usr/bin/cat ./t.head >./ABB_cleanholdshelf.txt; /usr/bin/tail +4 @.prn >>./ABB_cleanholdshelf.txt|
