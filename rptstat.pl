@@ -59,12 +59,39 @@ sub usage()
 	
 Version: $VERSION.
 This script takes the name, or partial name of a report finds it by date
-(default today) and outputs the results to STDOUT. The 3rd field in the -c file
-can include a script to run who's output will be printed first. If the script requires
-the current report as an argument, then use the \@ character as a placeholder for the
-name of the report being reported on.
+(default today) and outputs the results to STDOUT. This script can report many metrics 
+about a report as well as the salient results of the report. 
+
+$0 includes can run an external script to collect stats from outside Symphony's normal
+reporting pipeline. An example would be to collecting stats directly from API calls.
+Be careful to test all scripts you are run before implementing them in a production environment.
+
+$0 can also read a special configuration file as input. This file contains 3 pipe delimited
+fields as a minimum, but no maximum number of fields. The first field is the name of the
+desired report, the date the report ran, blank if from today, and a script to run which
+may also be blank. Any additional fields are considered results to be searched for and 
+printed if they exist. Examples would be -5u to print out the number of 'users' associated 
+with the report code of 1305. 
+
+More on scripting: The script in the 3rd field in the -c file requires the current report
+as an argument, then use the \@ character is used as a placeholder for the name of the
+report being reported on.
+
 Example: 'count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol expanded to:
 'count.pl -c /s/sirsi/Unicorn/Rptprint/xast.prn -s "\.email"'.
+
+Dates are entered using four formats: ANSI short date, 'yyyymmdd', relative date: '-n' where
+'n' is the number of days ago the report ran, all dates: '*' report all named reports and 
+blank: '', or the absence of a date which report for the current day.
+
+If a report does not exist $0 will print nothing unless -w is selected, which will print
+a warning message to STDERR.
+Example: 
+   bash$ echo "Non-existant report" | $0 -oDr
+   bash$ 
+   bash$ echo "Non-existant report" | $0 -oDr -w
+   * warning: report 'Non-existant report' from '20120717' is not available. *
+   bash$ 
 
  -d yyyymmdd : checks the reports for a specific day (ANSI date format)
  -d -n       : report from 'n' days ago.
@@ -80,8 +107,7 @@ Example: 'count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol ex
                Holds Notices|20120614|./script.pl -e|9N|
                which would print the output from script.pl -e as the results in addition
                to the codes you specify. You may get unpredictable results depending on the executable's behaviour.
- -o          : output capital letters for report meta data lowercase for report results:
-               d - date ascii
+ -o          : d - date ascii
                D - date and time ascii
                e - emailed count
                E - mailed count
