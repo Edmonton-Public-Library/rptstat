@@ -63,8 +63,8 @@ This script takes the name, or partial name of a report finds it by date
 can include a script to run who's output will be printed first. If the script requires
 the current report as an argument, then use the \@ character as a placeholder for the
 name of the report being reported on.
-Example: './count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol expanded to:
-'./count.pl -c /s/sirsi/Unicorn/Rptprint/xast.prn -s "\.email"'.
+Example: 'count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol expanded to:
+'count.pl -c /s/sirsi/Unicorn/Rptprint/xast.prn -s "\.email"'.
 
  -d yyyymmdd : checks the reports for a specific day (ANSI date format)
  -d -n       : report from 'n' days ago.
@@ -128,10 +128,11 @@ Example: './count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol 
  -w          : write warnings to STDERR.
  -x          : this (help) message
 
-example: echo "Generalized Bill" | $0 -d 20120324 -5u -s"count.pl -c @.prn -s\"\.email\"" -w
-         cat reports.lst | $0 -odr -s"count.pl -c @.log -s\"WOOCA6\"" -d-1
+example: echo "Generalized Bill" | $0 -d 20120324 -5u -s"count.pl -c @.prn -s'.email'" -w
+         cat reports.lst | $0 -odr -s"count.pl -c @.log -s'WOOCA6'" -d-1
          echo "Overdue Notices->Mailed Overdue Notices" | $0 -odr -5u -0E
          $0 -c weekday.stats -odr
+		 
 EOF
     exit;
 }
