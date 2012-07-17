@@ -87,11 +87,11 @@ blank: '', or the absence of a date which report for the current day.
 If a report does not exist $0 will print nothing unless -w is selected, which will print
 a warning message to STDERR.
 Example: 
-   bash$ echo "Non-existant report" | $0 -oDr
-   bash$ 
-   bash$ echo "Non-existant report" | $0 -oDr -w
+   bash\$ echo "Non-existant report" | $0 -oDr
+   bash\$ 
+   bash\$ echo "Non-existant report" | $0 -oDr -w
    * warning: report 'Non-existant report' from '20120717' is not available. *
-   bash$ 
+   bash\$ 
 
  -d yyyymmdd : checks the reports for a specific day (ANSI date format)
  -d -n       : report from 'n' days ago.
