@@ -8,6 +8,7 @@ APP=rptstat.pl
 C_NOTICES=notice.stats
 C_SVA=sva.stats
 C_CLEANHOLDS=cleanhold.stats
+C_PREVCLEANHOLDS=previous.days.cleanhold.stats
 
 put:
 	perl -c ${LOCAL}${APP}
@@ -25,3 +26,4 @@ push_sva_configs:
 	scp ${LOCAL}${C_SVA} ${USER}@${SERVER}:${REMOTE}
 push_clean_configs:
 	scp ${LOCAL}${C_CLEANHOLDS} ${USER}@${SERVER}:${CLEAN}
+	scp ${LOCAL}${C_PREVCLEANHOLDS} ${USER}@${SERVER}:${CLEAN}

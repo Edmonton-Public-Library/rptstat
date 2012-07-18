@@ -1,0 +1,21 @@
+Custom Clean Hold Shelf:EPLWOO|-2|/usr/bin/tail +9 @.prn >>./WOO_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLWMC|-2|/usr/bin/tail +9 @.prn >>./WMC_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLSTR|-2|/usr/bin/tail +9 @.prn >>./STR_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLSPW|-2|/usr/bin/tail +9 @.prn >>./SPW_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLRIV|-2|/usr/bin/tail +9 @.prn >>./RIV_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLMNA|-2|/usr/bin/tail +9 @.prn >>./MNA_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLMLW|-2|/usr/bin/tail +9 @.prn >>./MLW_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLLON|-2|/usr/bin/tail +9 @.prn >>./LON_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLLHL|-2|/usr/bin/tail +9 @.prn >>./LHL_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLJPL|-2|/usr/bin/tail +9 @.prn >>./JPL_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLIDY|-2|/usr/bin/tail +9 @.prn >>./IDY_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLHIG|-2|/usr/bin/tail +9 @.prn >>./HIG_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLCSD|-2|/usr/bin/tail +9 @.prn >>./CSD_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLCPL|-2|/usr/bin/tail +9 @.prn >>./CPL_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLCAL|-2|/usr/bin/tail +9 @.prn >>./CAL_cleanholdshelf.txt|
+Custom Clean Hold Shelf:EPLABB|-2|/usr/bin/tail +9 @.prn >>./ABB_cleanholdshelf.txt|
+# Makes a new Clean HOLDS report for each branch. Run rptstat as: rptstat.pl -oc -c cleanhold.stat
+# for the first file so it includes todays clean holds if required, then run this
+# rptstat.pl -oc -c previous.cleanhold.stats where you can change the -2 to the day that
+# you are missing. In this example the date missing was 2 days ago. The +9 appends the 
+# contents without additional header from the report.
