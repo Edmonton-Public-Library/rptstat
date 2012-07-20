@@ -21,6 +21,8 @@
 #          and simplier config files.
 #          0.5.4 - added -d* to show results of all available named reports result display.
 #          Fixed '@' bug that didn't include full path to file on substitution match.
+#          0.5.5 - fixed scripts to append pipe from inside rptstat rather than relying on 
+#          external scripts to terminate their functions with '|'.
 ############################################################################################
 
 use strict;
@@ -28,7 +30,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 use Switch;
-my $VERSION = "0.5.4";
+my $VERSION = "0.5.5";
 
 # Environment setup required by cron to run script because its daemon runs
 # without assuming any environment settings and we need to use sirsi's.
@@ -245,7 +247,7 @@ my $externSymbol       = qq{%};                  # symbol that this is an extern
 # return: 
 sub init
 {
-    my $opt_string = 'd:c:o:s:tvwx2:3:4:5:7:8:9:0:'; # *** -p is reserved for pseudonym don't use it as a cmd line option! ***
+    my $opt_string = 'Dd:c:o:s:tvwx2:3:4:5:7:8:9:0:'; # *** -p is reserved for pseudonym don't use it as a cmd line option! ***
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ($opt{'x'}); # Must have a name or a config that must have a name.
 	if ($opt{'v'})
@@ -383,22 +385,18 @@ sub searchPrintList
 			# now execute the script if there is one.
 			if (defined($script) and $script ne "")
 			{
-				# we need to replace the @ for each report.
+				# we need to replace the @ for each report and preserve the original script
+				# command because it may run again but on a different file substitution.
 				$cmdLine = $script;
 				# now a user can use the '@' symbol to indicate that the 
 				# the name of the file is to be substituted. First we have
 				# replace any '@' with the path and name of the report.
 				print "\nreport==>$reportKey\n" if ($opt{'D'});
 				my $reportPath = qq{$listDir/$reportKey};
+				# if there isn't a '@' then nothing gets changed.
 				$cmdLine =~ s/@/$reportPath/g;
 				print STDERR "running script: '$cmdLine'\n" if ($opt{'D'});
-				# we can't just print what the script does becaue when no other option is picked
-				# it can return a new line and nothing else which means it failed.
-				my $runThis = qq{$cmdLine};
-				my $sResults = `$runThis`;
-				print $sResults;
-				chomp($sResults);
-				$itemsPrinted += 1 if ($sResults ne "");
+				$itemsPrinted += runScript($cmdLine);
 			}
 			if ($itemsPrinted > 0)
 			{
@@ -421,18 +419,14 @@ sub searchPrintList
 		else
 		{
 			$itemsPrinted = getRptMetaData($opt{'o'}, "----|".$message."$n|$date|UNKNOWN|UNKNOWN|$script|0||");
-			# we can't just print what the script does becaue when no other option is picked
-			# it can return a new line and nothing else which means it failed.
-			$cmdLine = qq{$script};
-			my $sResults = `$cmdLine`;
-			print $sResults;
-			chomp($sResults);
-			$itemsPrinted += 1 if ($sResults ne "");
+			print STDERR "running script: '$script'\n" if ($opt{'D'});
+			$itemsPrinted += runScript($script);
 		}
 		print "\n"; # run or not we print a new line.
 	}
 	else # Print that the report is not available.
 	{
+		# if no reports are found for any date in the past.
 		if ($date eq "9999")
 		{
 			print STDERR "* warning: no record of report '$name' found. *\n" if ($opt{'w'});
@@ -443,6 +437,23 @@ sub searchPrintList
 		}
 	}
 	return $itemsPrinted;
+}
+
+# Runs the commands supplied in the argument string. A trailing pipe is always
+# printed.
+# param:  script string - commands to run as a system call.
+# return: 0 if there were no results in stdout and 1 otherwise. 
+sub runScript
+{
+	my $script = $_[0];
+	# we can't just print what the script does becaue when no other option is picked
+	# it can return a new line and nothing else which means it failed.
+	my $cmdLine = qq{$script};
+	my $sResults = `$cmdLine`;
+	chomp($sResults);
+	print $sResults."|";
+	return 1 if ($sResults);
+	return 0;
 }
 
 # Gets the options for the type of results the user wants to display from the report.
@@ -585,6 +596,7 @@ sub getEmailedCount
 	open(RPTLOG, "<$reportLogFile") or die "*** error while processing '$reportLogFile': $! ***\n";
 	while (<RPTLOG>)
 	{
+		# This is fragile since it assumes that the number of users emailed result is always represented by 1305 or 1309.
 		if ($_ =~ m/\$<user> \$\(130[59]\)/)
 		{
 			$totalCount = trim(substr($_, 0, index($_, "<") -1));
@@ -598,7 +610,7 @@ sub getEmailedCount
 		print qq{0|};
 		return;
 	}
-	open(RPTPRINT, "<$reportPrintFile") or die "*** error while processing '$reportPrintFile': $!\\n";
+	open(RPTPRINT, "<$reportPrintFile") or die "*** error while processing '$reportPrintFile': $!\n";
 	while (<RPTPRINT>)
 	{
 		if ($_ =~ m/\.email/)
