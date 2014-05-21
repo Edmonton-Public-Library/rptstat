@@ -23,6 +23,7 @@
 #          Fixed '@' bug that didn't include full path to file on substitution match.
 #          0.5.5 - fixed scripts to append pipe from inside rptstat rather than relying on 
 #          external scripts to terminate their functions with '|'.
+#          0.5.6 - Added 'h' switch to find a report name and owner given a sched id. 
 ############################################################################################
 
 use strict;
@@ -30,7 +31,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 use Switch;
-my $VERSION = "0.5.5";
+my $VERSION = "0.5.6";
 
 # Environment setup required by cron to run script because its daemon runs
 # without assuming any environment settings and we need to use sirsi's.
@@ -96,9 +97,6 @@ Example:
    * warning: report 'Non-existant report' from '20120717' is not available. *
    bash\$ 
 
- -d yyyymmdd : checks the reports for a specific day (ANSI date format)
- -d -n       : report from 'n' days ago.
- -d *        : all named reports currently available.
  -c file     : input config file of stats you want to collect. Should be formated as:
                name (required)|date (required but can be blank)|script and params (required but can be blank|code1|code2|...|codeN|
              Example: 
@@ -110,6 +108,10 @@ Example:
                Holds Notices|20120614|./script.pl -e|9N|
                which would print the output from script.pl -e as the results in addition
                to the codes you specify. You may get unpredictable results depending on the executable's behaviour.
+ -d yyyymmdd : checks the reports for a specific day (ANSI date format)
+ -d -n       : report from 'n' days ago.
+ -d *        : all named reports currently available.
+ -h          : Find the report name and owner from a sched id.
  -o          : d - date ascii
                D - date and time ascii
                e - emailed count
@@ -157,11 +159,24 @@ Example:
  -w          : write warnings to STDERR.
  -x          : this (help) message
 
-example: echo "Generalized Bill" | $0 -d 20120324 -5u -s"count.pl -c @.prn -s'.email'" -w
-         cat reports.lst | $0 -odr -s"count.pl -c @.log -s'WOOCA6'" -d-1
-         echo "Overdue Notices->Mailed Overdue Notices" | $0 -odr -5u -0E
-         $0 -c weekday.stats -odr
-		 
+examples:
+Print out the records processed from the "Generalized Bill" report from March 24, 2012 and 
+warn if it can't be found.  
+   echo "Generalized Bill" | $0 -d 20120324 -5u -w
+Find all the reports named in "reports.lst" (one per line), that ran yesterday and output the date 
+and name of the report. 
+   cat reports.lst | $0 -odr -d-1
+Output the "Overdue Notices" report from today include the date the number of records processed and number 
+of records emailed, but on output rename the report "Mailed Overdue Notices"
+   echo "Overdue Notices->Mailed Overdue Notices" | $0 -odr -5u -0E
+produces:
+   20140521|Mailed Overdue Notices|814|854|
+Output the date and name of all the reports listed in the "weekday.stats" file. See -c for more information.
+   $0 -c weekday.stats -odr
+Output the name and owner of a report given a sched id of a report:
+   echo "ilpg" | $0 -h
+produces:
+   Load Bibliographic new DVD MWT|LFRILEK|
 EOF
     exit;
 }
@@ -247,7 +262,7 @@ my $externSymbol       = qq{%};                  # symbol that this is an extern
 # return: 
 sub init
 {
-    my $opt_string = 'Dd:c:o:s:tvwx2:3:4:5:7:8:9:0:'; # *** -p is reserved for pseudonym don't use it as a cmd line option! ***
+    my $opt_string = 'c:Dd:ho:s:tvwx2:3:4:5:7:8:9:0:'; # *** -p is reserved for pseudonym don't use it as a cmd line option! ***
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ($opt{'x'}); # Must have a name or a config that must have a name.
 	if ($opt{'v'})
@@ -279,6 +294,31 @@ sub init
 	}
 }
 
+# Finds the name of the report for a given sched id.
+# param:  4 character schedid like 'mbmj'.
+# return: String name of the report of given schedid or empty string if the sched id could not be found.
+sub getNameFromSchedId($)
+{
+	my $schedId   = shift;
+	open FH, "<$printList" or die "**Error: $! while trying to open '$printList'\n"; 
+	my @lines = grep /($schedId)/, <FH>;
+	close FH;
+	# print @lines;
+	# parse: uiby|Load Bibliographic Records Adult pbk|201109201619|ERROR|CKEAY|bibload|0||
+	# We need fields 2
+	if (defined $lines[0])
+	{
+		my @fields = split('\|', $lines[0]);
+		# if that was successful we should have the report name in field[2] (zero indexed, remember?)
+		if (defined $fields[1])
+		{
+			return $fields[1];
+		}
+	}
+	# all that failed so return an empty string.
+	return "";
+}
+
 # Validates report names. Must not be empty but can have special symbol.
 # If the user specifies '->' the string after the '->' is used as the 
 # name for the report on output.
@@ -297,7 +337,18 @@ sub setName($)
 	# didn't specify a pseudoynm.
 	if ($pseudonym[0] ne "")
 	{
-		$opt{'n'} = $pseudonym[0];
+		if ($opt{'h'}) # Find the report name from schedlist given the schedid.
+		{
+			my $foundName = getNameFromSchedId($pseudonym[0]);
+			# Print it to stderr so the user can see the name. The default for rptstat is to output reports from today
+			# and if the report didn't run today empty results could be confusing.
+			print STDERR "report name: '$foundName'\n";
+			$opt{'n'} = $foundName;
+		}
+		else
+		{
+			$opt{'n'} = $pseudonym[0];
+		}
 	}
 	else # happens if user enters "" or "->some other name"; lookup can't be empty.
 	{
@@ -357,9 +408,9 @@ foreach my $reportListEntry (@requestedReports)
 	}
 	searchPrintList($opt{'n'}, $opt{'d'}, $options, $opt{'s'}, @printListLines);
 }
-1;
 
-#
+############# Start of subroutines #############
+
 # Perhaps no surprise that this runs the search based on the input parameters.
 # param:  name - string name, or partial name, of the report.
 # param:  date - string requested date of the report in ANSI 'yyyymmdd' format.
