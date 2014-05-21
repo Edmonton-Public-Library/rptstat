@@ -1,3 +1,116 @@
-TODO:
-DONE - rptstat.pl needs to be able to be to output email counts and notice counts.
-reformulated: rptstat.pl needs to execute an external script whose results will be displayed instead of the usual status output.
+This script takes the name, or partial name of a report finds it by date
+(default today) and outputs the results to STDOUT. This script can report many metrics 
+about a report as well as the salient results of the report. 
+
+rptstat.pl includes can run an external script to collect stats from outside Symphony's normal
+reporting pipeline. An example would be to collecting stats directly from API calls.
+Be careful to test all scripts you are run before implementing them in a production environment.
+
+rptstat.pl can also read a special configuration file as input. This file contains 3 pipe delimited
+fields as a minimum, but no maximum number of fields. The first field is the name of the
+desired report, the date the report ran, blank if from today, and a script to run which
+may also be blank. Any additional fields are considered results to be searched for and 
+printed if they exist. Examples would be -5u to print out the number of 'users' associated 
+with the report code of 1305. 
+
+More on scripting: The script in the 3rd field in the -c file requires the current report
+as an argument, then use the \@ character is used as a placeholder for the name of the
+report being reported on.
+
+Example: 'count.pl -c \@.prn -s "\.email"' will run the script with \@ symbol expanded to:
+'count.pl -c /s/sirsi/Unicorn/Rptprint/xast.prn -s "\.email"'.
+
+Dates are entered using four formats: ANSI short date, 'yyyymmdd', relative date: '-n' where
+'n' is the number of days ago the report ran, all dates: '*' report all named reports and 
+blank: '', or the absence of a date which report for the current day.
+
+If a report does not exist rptstat.pl will print nothing unless -w is selected, which will print
+a warning message to STDERR.
+Example: 
+   bash\$ echo "Non-existant report" | rptstat.pl -oDr
+   bash\$ 
+   bash\$ echo "Non-existant report" | rptstat.pl -oDr -w
+   * warning: report 'Non-existant report' from '20120717' is not available. *
+   bash\$ 
+
+ -c file     : input config file of stats you want to collect. Should be formated as:
+               name (required)|date (required but can be blank)|script and params (required but can be blank|code1|code2|...|codeN|
+             Example: 
+               Generalized bills|||5u|
+               which would report the number of user's selected from today's report.
+               Generalized bills ->Generalized bills - snail mail|||5u|
+               which would report the same as above but change the name to 'Generalized bills - snail mail'
+             Example:
+               Holds Notices|20120614|./script.pl -e|9N|
+               which would print the output from script.pl -e as the results in addition
+               to the codes you specify. You may get unpredictable results depending on the executable's behaviour.
+ -d yyyymmdd : checks the reports for a specific day (ANSI date format)
+ -d -n       : report from 'n' days ago.
+ -d *        : all named reports currently available.
+ -h          : Find the report name and owner from a sched id.
+ -o          : d - date ascii
+               D - date and time ascii
+               e - emailed count
+               E - mailed count
+               r - report name
+               s - status
+               o - owner
+               n - script name
+               c - report code - 4 character code report file name.
+ -2 <code>   : records edited
+ -3 <code>   : records printed
+ -4 <code>   : items printed
+ -5 <code>   : records processed
+ -7 <code>   : records encountered
+ -8 <code>   : records considered
+ -9 <code>   : records selected
+ -0 <code>   : records mailed. Reported values appear before any other switch <code> selection. For example
+               echo Bill | rptstat.pl -5u -0e produces Generalized Bill Notices - Weekday|512|481|
+               echo Bill | rptstat.pl -0e -5u produces Generalized Bill Notices - Weekday|512|481|
+ code        : I - ascii
+               A - authority
+               B - bib
+               b - bill
+               n - callnum
+               t - catacnt
+               C - catalog
+               c - charge
+               g - charge
+               H - chargehist
+               M - communication
+               h - hold
+               i - item
+               m - itemacnt
+               N - notice
+               p - pickup
+               T - transact
+               u - user
+               a - useracnt
+               s - userstatus
+               e - email prints out before any other switch code.
+               E - mail (printed notice) prints out before any other switch code.
+ -s script   : script that you want to run.
+ -t          : use MySQL timestamp time convention for output "yyyy-mm-dd hh:mm:ss".
+ -v          : version (currently 0.5.6).
+ -w          : write warnings to STDERR.
+ -x          : this (help) message
+
+examples:
+Print out the records processed from the "Generalized Bill" report from March 24, 2012 and 
+warn if it can't be found.  
+   echo "Generalized Bill" | rptstat.pl -d 20120324 -5u -w
+Find all the reports named in "reports.lst" (one per line), that ran yesterday and output the date 
+and name of the report. 
+   cat reports.lst | rptstat.pl -odr -d-1
+Output the "Overdue Notices" report from today include the date the number of records processed and number 
+of records emailed, but on output rename the report "Mailed Overdue Notices"
+   echo "Overdue Notices->Mailed Overdue Notices" | rptstat.pl -odr -5u -0E
+produces:
+   20140521|Mailed Overdue Notices|814|854|
+Output the date and name of all the reports listed in the "weekday.stats" file. See -c for more information.
+   rptstat.pl -c weekday.stats -odr
+Output the name and owner of a report given a sched id of a report:
+   echo "ilpg" | rptstat.pl -h
+produces:
+   Load Bibliographic new DVD MWT|LFRILEK|
+EOF

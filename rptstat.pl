@@ -1,5 +1,24 @@
 #!/s/sirsi/Unicorn/Bin/perl -w
 ###########################################################################################
+#
+# Reports useful information about reports on SirsiDynix's Symphony ILS.
+#    Copyright (C) 2012, 2013, 2014  Andrew Nisbet Edmonton Public Library
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+# MA 02110-1301, USA.
+#
 # Purpose: Get results of a given report report.
 # Method:  The script reads the printlist searching for Convert discards
 #          reports for a user specified day (default: today). It then
@@ -59,7 +78,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: $0 [-xwv] [-d [-n|*|ascii_date]] [-23457890[aAbBcDEeghHiIMmopstTu]] [-odDeErsonc]
+	usage: $0 [-xwv] [-d [-n|*|ascii_date]] [-23457890[aAbBcDEeghHiIMmopstTu]] [-odDeEhrsonc]
 	
 Version: $VERSION.
 This script takes the name, or partial name of a report finds it by date
