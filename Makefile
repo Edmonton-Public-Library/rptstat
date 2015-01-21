@@ -9,12 +9,10 @@ C_NOTICES=notice.stats
 C_SVA=sva.stats
 C_CLEANHOLDS=cleanhold.stats
 C_PREVCLEANHOLDS=previous.days.cleanhold.stats
+ARGS= -x 
 
-put:
-	perl -c ${LOCAL}${APP}
+put: test
 	scp ${LOCAL}${APP} ${USER}@${SERVER}:${REMOTE}
-get:
-	scp ${USER}@${SERVER}:${REMOTE}${APP} ${LOCAL}
 test:
 	perl -c ${LOCAL}${APP}
 push_all_configs:
@@ -27,3 +25,6 @@ push_sva_configs:
 push_clean_configs:
 	scp ${LOCAL}${C_CLEANHOLDS} ${USER}@${SERVER}:${CLEAN}
 	scp ${LOCAL}${C_PREVCLEANHOLDS} ${USER}@${SERVER}:${CLEAN}
+install: test
+	scp ${LOCAL}${APP} ${USER}@${SERVER}:/s/sirsi/Unicorn/Bincustom/${APP}
+	ssh ${USER}@${SERVER} ${APP} ${ARGS}

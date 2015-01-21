@@ -2,7 +2,7 @@
 ###########################################################################################
 #
 # Reports useful information about reports on SirsiDynix's Symphony ILS.
-#    Copyright (C) 2012, 2013, 2014  Andrew Nisbet Edmonton Public Library
+#    Copyright (C) 2012, 2013, 2014, 2015  Andrew Nisbet Edmonton Public Library
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -43,6 +43,7 @@
 #          0.5.5 - fixed scripts to append pipe from inside rptstat rather than relying on 
 #          external scripts to terminate their functions with '|'.
 #          0.5.6 - Added 'h' switch to find a report name and owner given a sched id. 
+#          0.5.7 - Added '-oC' switch to provide the fully qualified path to a given report. 
 ############################################################################################
 
 use strict;
@@ -50,7 +51,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 use Switch;
-my $VERSION = "0.5.6";
+my $VERSION = "0.5.7";
 
 # Environment setup required by cron to run script because its daemon runs
 # without assuming any environment settings and we need to use sirsi's.
@@ -78,7 +79,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: $0 [-xwv] [-d [-n|*|ascii_date]] [-23457890[aAbBcDEeghHiIMmopstTu]] [-odDeEhrsonc]
+	usage: $0 [-xwv] [-d [-n|*|ascii_date]] [-23457890[aAbBcDEeghHiIMmopstTu]] [-odDeEhrsoncC]
 	
 Version: $VERSION.
 This script takes the name, or partial name of a report finds it by date
@@ -140,6 +141,7 @@ Example:
                o - owner
                n - script name
                c - report code - 4 character code report file name.
+               C - report full qualified report file name. Does not include trailing '|' pipe character.
  -2 <code>   : records edited
  -3 <code>   : records printed
  -4 <code>   : items printed
@@ -630,6 +632,7 @@ sub getRptMetaData
 			case 'o' { print "$printListRecord[4]|"; $count++ }
 			case 'n' { print "$printListRecord[5]|"; $count++ }
 			case 'c' { print "$printListRecord[0]|"; $count++ }
+			case 'C' { print "$listDir/$printListRecord[0]" . ".prn"; $count++ }
 			case 'e' { getEmailedCount($printListRecord[0], $printListRecord[1], 1); $count++ }
 			case 'E' { getEmailedCount($printListRecord[0], $printListRecord[1], 0); $count++ }
 			case 'r' { if ($opt{'p'})
