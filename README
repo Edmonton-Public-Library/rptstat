@@ -57,6 +57,7 @@ Example:
                o - owner
                n - script name
                c - report code - 4 character code report file name.
+               C - report full qualified report file name. Does not include trailing '|' pipe character.
  -2 <code>   : records edited
  -3 <code>   : records printed
  -4 <code>   : items printed
