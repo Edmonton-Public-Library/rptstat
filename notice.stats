@@ -1,10 +1,13 @@
-### List of reports to run at 21:15 hours.
+### List of reports to run at 21:15 hours. Canonical version kept in ilsdev@ilsdev1.epl.ca:~/projects/statdb
 Overdue Notices - Weekdays->1|||0e|
 Overdue Notices - Weekdays->2|||0E|
-Overdue Notices - Sat to Sun->17|||5u|
-Hold Pickup Notices - Monday->19|||5u|
-Hold Pickup Notices - Tues to Fri->3|||5u|
-Generalized Bill Notices - Sat to Sun->18|||5u|
+#Overdue Notices - Sat to Sun->17|||5u|
+Overdue Notices - Email->17|||5u|
+Hold Pickup Notices - Early->24|||5u|
+#Hold Pickup Notices - Monday->19|||5u|
+#Hold Pickup Notices - Tues to Fri->3|||5u|
+#Generalized Bill Notices - Sat to Sun->18|||5u|
+Generalized Bill Notices - Email->18|||5u|
 Generalized Bill Notices - Weekday->4||count.pl -i @.prn -d">10"|
 Generalized Bill Notices - Weekday->5|||0e|
 Renewal Reminder->6|||9u|
@@ -15,3 +18,13 @@ Hold Pickup Reminder->10|||5u|
 Self Registration Activation Expiry Reminder->11|||9u|
 Hold Pickup Notices - 2 PM->12|||5u|
 Hold Pickup Notices - 9 PM->13|||5u|
+Preoverdue Courtesy Reminder - 3 Days->25|||5u|
+Customer Inactivity Notification 120->26|||9u|
+Customer Inactivity Notification 240->27|||9u|
+Customer Inactivity Notification 365->28|||9u|
+Customer Activity Notification 365->29|||9u|
+#Pre-UMS and account summary notice collection.
+Account Summary->30|||5u|
+PreLost Overdue Notice->31|||5u|
+PreReferral Bill Notice - Email->32|||5u|
+PreReferral Bill Notice - Weekdays->33|||5u|
